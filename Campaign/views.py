@@ -70,7 +70,6 @@ def campaign_status(request, campaign_name, sort_key=2):
             )
             is_mqm_or_esa = False
 
-
             # Exclude document scores in document-level tasks, because we want to keep
             # the numbers reported on the campaign status page consistent across
             # accounts, which usually include different numbers of document
@@ -107,9 +106,10 @@ def campaign_status(request, campaign_name, sort_key=2):
                 )
                 # compute time override based on document times
                 import collections
+
                 _time_pairs = collections.defaultdict(list)
                 for x in _data:
-                    _time_pairs[x[7]+ " ||| " +x[4]].append((x[0], x[1]))
+                    _time_pairs[x[7] + " ||| " + x[4]].append((x[0], x[1]))
                 _time_pairs = [
                     (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
                     for doc, doc_v in _time_pairs.items()
@@ -132,17 +132,15 @@ def campaign_status(request, campaign_name, sort_key=2):
                 )
                 # compute time override based on document times
                 import collections
+
                 _time_pairs = collections.defaultdict(list)
                 for x in _data:
-                    _time_pairs[x[7]+ " ||| " +x[4]].append((x[0], x[1]))
+                    _time_pairs[x[7] + " ||| " + x[4]].append((x[0], x[1]))
                 _time_pairs = [
                     (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
                     for doc, doc_v in _time_pairs.items()
                 ]
-                _data = [
-                    (x[0], x[1], x[2], x[3], x[4], x[5], x[6])
-                    for x in _data
-                ]
+                _data = [(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in _data]
             else:
                 _data = _data.values_list(
                     'start_time',
@@ -171,7 +169,7 @@ def campaign_status(request, campaign_name, sort_key=2):
                 _first_modified = str(_date_modified).split('.')[0]
             else:
                 _first_modified = 'Never'
-                
+
             # Compute last modified time
             _last_modified_raw = (
                 seconds_to_timedelta(max(_end_times)) if _end_times else None
@@ -185,8 +183,10 @@ def campaign_status(request, campaign_name, sort_key=2):
             # Compute total annotation time
             if is_mqm_or_esa and _first_modified_raw and _last_modified_raw:
                 # for MQM and ESA compute the lower and upper annotation times
-                # use only the end times 
-                _annotation_time_upper = (_last_modified_raw-_first_modified_raw).seconds
+                # use only the end times
+                _annotation_time_upper = (
+                    _last_modified_raw - _first_modified_raw
+                ).seconds
                 _hours = int(floor(_annotation_time_upper / 3600))
                 _minutes = int(floor((_annotation_time_upper % 3600) / 60))
                 _annotation_time_upper = f'{_hours:0>2d}h{_minutes:0>2d}m'
@@ -205,7 +205,6 @@ def campaign_status(request, campaign_name, sort_key=2):
                     _annotation_time = f'{_annotation_time}--{_annotation_time_upper}'
             else:
                 _annotation_time = 'n/a'
-
 
             _item = (
                 user.username,

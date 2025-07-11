@@ -1,6 +1,7 @@
 """
 Campaign admin.py
 """
+
 # pylint: disable=C0330,import-error
 from django.contrib import admin
 from django.contrib.admin.filters import AllValuesFieldListFilter

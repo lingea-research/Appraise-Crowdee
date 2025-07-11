@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 # pylint: disable=C0103,C0330,no-member
 import sys
 from collections import defaultdict
@@ -499,7 +500,6 @@ class DirectAssessmentContextResult(BaseMetadata):
             timestamps.append((result.start_time, result.end_time))
 
         return seconds_to_timedelta(_compute_user_total_annotation_time(timestamps))
-    
 
     @classmethod
     def get_system_annotations(cls):

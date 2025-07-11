@@ -265,23 +265,21 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         # get all items (100) and try to find resul
         all_items = [
             (
-                item, 
+                item,
                 DirectAssessmentDocumentResult.objects.filter(
                     item=item, activated=False, completed=True, createdBy=user
-                ).last()
+                ).last(),
             )
             for item in self.items.all().order_by('id')
         ]
         unfinished_items = [i for i, r in all_items if not r]
-        
+
         docs_total = len({i.documentID for i, r in all_items})
-        items_completed = len([
-            i for i, r in all_items if r and r.completed
-        ])
-        docs_completed = docs_total - len({
-            i.documentID for i, r in all_items if r is None or not r.completed
-        })
-        
+        items_completed = len([i for i, r in all_items if r and r.completed])
+        docs_completed = docs_total - len(
+            {i.documentID for i, r in all_items if r is None or not r.completed}
+        )
+
         if not unfinished_items:
             return (
                 None,
@@ -295,7 +293,8 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         # things are ordered with batch order
         next_item = unfinished_items[0]
         doc_items_all = [
-            (i, r) for i, r in all_items
+            (i, r)
+            for i, r in all_items
             # match document name and system
             if i.documentID == next_item.documentID and i.targetID == next_item.targetID
         ]
@@ -308,12 +307,12 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         )
 
         return (
-            next_item,         # the first unannotated item for the user
-            items_completed,   # the number of completed items in the task
-            docs_completed,    # the number of completed documents in the task
-            doc_items,         # all items from the current document
-            doc_items_results, # all score results from the current document
-            docs_total,        # the total number of documents in the task
+            next_item,  # the first unannotated item for the user
+            items_completed,  # the number of completed items in the task
+            docs_completed,  # the number of completed documents in the task
+            doc_items,  # all items from the current document
+            doc_items_results,  # all score results from the current document
+            docs_total,  # the total number of documents in the task
         )
 
     def get_results_for_each_item(self, block_items, user):
@@ -457,7 +456,7 @@ class DirectAssessmentDocumentTask(BaseMetadata):
                 new_items.append(new_item)
                 if item['isCompleteDocument']:
                     doc_items += 1
-            
+
             LOGGER.info(f'The task has {len(new_items)} items')
             current_count += 1
 
@@ -592,18 +591,23 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
     @classmethod
     def get_time_for_user(cls, user):
         results = cls.objects.filter(createdBy=user, activated=False, completed=True)
-        is_esa_or_mqm = any([
-            "esa" in result.task.campaign.campaignOptions.lower().split(";") or
-            "mqm" in result.task.campaign.campaignOptions.lower().split(";")
-            for result in results
-        ])
+        is_esa_or_mqm = any(
+            [
+                "esa" in result.task.campaign.campaignOptions.lower().split(";")
+                or "mqm" in result.task.campaign.campaignOptions.lower().split(";")
+                for result in results
+            ]
+        )
 
         if is_esa_or_mqm:
             # for ESA or MQM, do minimum and maximum from each doc
             import collections
+
             timestamps = collections.defaultdict(list)
             for result in results:
-                timestamps[result.item.documentID+" ||| "+result.item.targetID].append((result.start_time, result.end_time))
+                timestamps[
+                    result.item.documentID + " ||| " + result.item.targetID
+                ].append((result.start_time, result.end_time))
 
             # timestamps are document-level now, but that does not change anything later on
             timestamps = [
@@ -614,7 +618,6 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
             timestamps = []
             for result in results:
                 timestamps.append((result.start_time, result.end_time))
-
 
         return seconds_to_timedelta(_compute_user_total_annotation_time(timestamps))
 

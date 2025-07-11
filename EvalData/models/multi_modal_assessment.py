@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 # pylint: disable=C0103,C0330,no-member
 import sys
 from collections import defaultdict

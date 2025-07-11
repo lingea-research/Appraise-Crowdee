@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/1.11/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
+
 import logging
 import os
 import warnings
@@ -37,7 +38,9 @@ if SECRET_KEY == _SECRET_KEY_DEFAULT:
 
 ALLOWED_HOSTS = os.environ.get('APPRAISE_ALLOWED_HOSTS', '127.0.0.1').split(',')
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('APPRAISE_CSRF_TRUSTED_ORIGINS', 'https://*.127.0.0.1').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'APPRAISE_CSRF_TRUSTED_ORIGINS', 'https://*.127.0.0.1'
+).split(',')
 
 WSGI_APPLICATION = os.environ.get(
     'APPRAISE_WSGI_APPLICATION', 'Appraise.wsgi.application'

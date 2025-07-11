@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 # pylint: disable=C0103,C0330,no-member
 import sys
 from collections import defaultdict
@@ -341,7 +342,7 @@ class PairwiseAssessmentTask(BaseMetadata):
                     contextRight=context_right,
                 )
                 new_items.append(new_item)
-            
+
             LOGGER.info(f'The task has {len(new_items)} items')
             current_count += 1
 
