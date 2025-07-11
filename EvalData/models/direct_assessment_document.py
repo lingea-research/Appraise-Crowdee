@@ -398,11 +398,7 @@ class DirectAssessmentDocumentTask(BaseMetadata):
             # TODO: implement proper support for multiple json files in archive.
             for batch_json_file in batch_json_files:
                 batch_content = batch_zip.read(batch_json_file).decode('utf-8')
-                # Python 3.9 removed 'encoding' from json.loads
-                if sys.version_info >= (3, 9, 0):
-                    batch_json = loads(batch_content)
-                else:
-                    batch_json = loads(batch_content, encoding='utf-8')
+                batch_json = loads(batch_content)
 
         else:
             batch_json = loads(str(batch_file.read(), encoding='utf-8'))
@@ -438,7 +434,7 @@ class DirectAssessmentDocumentTask(BaseMetadata):
                 if current_length_text > max_length_text:
                     print(
                         current_length_text,
-                        item['targetText'].encode('utf-8'),
+                        item['targetText'],
                     )
                     max_length_text = current_length_text
 
@@ -461,14 +457,8 @@ class DirectAssessmentDocumentTask(BaseMetadata):
                 new_items.append(new_item)
                 if item['isCompleteDocument']:
                     doc_items += 1
-
-            if (len(new_items) - doc_items) != 100:
-                _msg = 'Expected 100 items for task but found {0}'.format(
-                    len(new_items) - doc_items
-                )
-                LOGGER.warn(_msg)
-                continue
-
+            
+            LOGGER.info(f'The task has {len(new_items)} items')
             current_count += 1
 
             for new_item in new_items:
@@ -940,8 +930,10 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
         qs = cls.objects.filter(completed=True, item__itemType__in=item_types)
 
         # If campaign ID is given, only return results for this campaign.
+        campaign_name = None
         if campaign_id:
             qs = qs.filter(task__campaign__id=campaign_id)
+            campaign_opts = str(qs.first().task.campaign.campaignOptions)
 
         if not include_inactive:
             qs = qs.filter(createdBy__is_active=True)
@@ -958,6 +950,17 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
             'item__isCompleteDocument',  # isCompleteDocument
             'mqm',  # MQM
         )
+
+        # This is a hack for having to use sourceID for pseudo-contrastive ESA
+        # campaigns, where we cannot use targetID to uniquely distinguish all
+        # systems. We cannot, because targetID must be identical for all items
+        # within a document
+        if campaign_opts and ("contrastiveesa" in campaign_opts.lower()):
+            attributes_to_extract = (
+                *attributes_to_extract[:1],
+                'item__sourceID',
+                *attributes_to_extract[2:],
+            )
 
         if extended_csv:
             attributes_to_extract = attributes_to_extract + (
