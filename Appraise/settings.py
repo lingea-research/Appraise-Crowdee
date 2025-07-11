@@ -211,7 +211,7 @@ if MEDIA_ROOT and MEDIA_ROOT[-1] != '/':
 
 # Base context for all views.
 BASE_CONTEXT = {
-    'commit_tag': '#wmt24dev',
+    'commit_tag': '#wmt25dev',
     'title': 'Appraise evaluation system',
     'static_url': STATIC_URL,
 }
