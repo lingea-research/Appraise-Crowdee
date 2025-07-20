@@ -75,6 +75,8 @@ const ERROR_TYPES = {
     },
     "Other": {},
 }
+
+
 Object.keys(SEVERITY_TO_COLOR).map((key) => {
     $(`#instruction_sev_${key}`).css("background-color", SEVERITY_TO_COLOR[key])
 })
@@ -311,8 +313,14 @@ class MQMItemHandler {
         }
         this.mqm_submitted = structuredClone(this.mqm)
         this.mqm_orig = JSON.parse(JSON.parse(this.el.children('#mqm-payload-orig').html()))
-        this.text_source_orig = decodeEntities(JSON.parse(this.el.children('#text-source-payload').html()).trim())
-        this.source_video = JSON.parse(this.el.children('#text-source-payload').html()).trim().startsWith("<video")
+        
+        let _src_raw = JSON.parse(this.el.children('#text-source-payload').html()).trim()
+        this.text_source_orig = decodeEntities(_src_raw)
+        this.source_is_multimodal = (
+            _src_raw.startsWith("<video") ||
+            _src_raw.startsWith("<audio") ||
+            _src_raw.startsWith("<img")
+        )
         // NOTE: we don't decode entities for the target text, which might cause false positive annotated errors
         this.text_target_orig = JSON.parse(this.el.children('#text-target-payload').html()).trim()
         this.SELECTION_STATE = []
@@ -335,9 +343,11 @@ class MQMItemHandler {
         let score = parseFloat(this.el.children('#score-payload').html())
 
     
-
         // setup_span_structure
         let html_target = this.text_target_orig.split("").map((v, i) => {
+            if (v == "\n") {
+                return "<br>" // preserve newlines
+            }
             return `<span class="mqm_char" id="target_char_${i}" char_id="${i}">${v}</span>`
         }).join("") + " <span class='mqm_char span_missing' id='target_char_missing' char_id='missing'>[MISSING]</span>"
         this.el_target.html(html_target)
@@ -357,8 +367,11 @@ class MQMItemHandler {
         }
 
         // handle character alignment estimation
-        if (!this.source_video) {
+        if (!this.source_is_multimodal) {
             let html_source = this.text_source_orig.split("").map((v, i) => {
+                if (v == "\n") {
+                    return "<br>" // preserve newlines
+                }
                 return `<span class="mqm_char_src" id="source_char_${i}" char_id="${i}">${v}</span>`
             }).join("")
             this.el_source.html(html_source)

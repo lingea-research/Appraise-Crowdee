@@ -255,11 +255,12 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         Used for MQM/ESA views
         Specifically a tuple with:
             next_item,
-            completed_items,
-            completed_docs,
+            items_completed,
+            items_total,
+            docs_completed,
+            docs_total,
             doc_items,
             doc_items_results,
-            total_docs,
         """
 
         # get all items (100) and try to find resul
@@ -274,16 +275,19 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         ]
         unfinished_items = [i for i, r in all_items if not r]
 
-        docs_total = len({i.documentID for i, r in all_items})
+        # documentID + targetID uniquely identifies documents
+        docs_total = len({(i.documentID, i.targetID) for i, r in all_items})
         items_completed = len([i for i, r in all_items if r and r.completed])
         docs_completed = docs_total - len(
-            {i.documentID for i, r in all_items if r is None or not r.completed}
+            {(i.documentID, i.targetID) for i, r in all_items if r is None or not r.completed}
         )
+        items_total = len(all_items)
 
         if not unfinished_items:
             return (
                 None,
                 items_completed,
+                items_total,
                 docs_completed,
                 [],
                 [],
@@ -309,10 +313,11 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         return (
             next_item,  # the first unannotated item for the user
             items_completed,  # the number of completed items in the task
+            items_total,
             docs_completed,  # the number of completed documents in the task
+            docs_total,  # the total number of documents in the task
             doc_items,  # all items from the current document
             doc_items_results,  # all score results from the current document
-            docs_total,  # the total number of documents in the task
         )
 
     def get_results_for_each_item(self, block_items, user):

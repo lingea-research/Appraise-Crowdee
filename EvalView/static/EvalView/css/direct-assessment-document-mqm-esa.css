@@ -73,6 +73,13 @@
     width: 100%;
 }
 
+.source-text > img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 45%;
+}
+
 .tutorial-text {
     text-align: center;
     color: #257;
