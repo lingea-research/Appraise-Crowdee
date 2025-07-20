@@ -1154,8 +1154,8 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
     # TODO: hotfix for WMT24
     # Tracking issue: https://github.com/AppraiseDev/Appraise/issues/185
     for item in doc_items:
-        # don't escape HTML video
-        if item.sourceText.strip().startswith("<video"):
+        # don't escape HTML video or images
+        if item.sourceText.strip().startswith("<video") or item.sourceText.strip().startswith("<img"):
             continue
         item.sourceText = escape(item.sourceText)
 
