@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/1.11/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
+
 import logging
 import os
 import warnings
@@ -37,7 +38,9 @@ if SECRET_KEY == _SECRET_KEY_DEFAULT:
 
 ALLOWED_HOSTS = os.environ.get('APPRAISE_ALLOWED_HOSTS', '127.0.0.1').split(',')
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('APPRAISE_CSRF_TRUSTED_ORIGINS', 'https://*.127.0.0.1').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'APPRAISE_CSRF_TRUSTED_ORIGINS', 'https://*.127.0.0.1'
+).split(',')
 
 WSGI_APPLICATION = os.environ.get(
     'APPRAISE_WSGI_APPLICATION', 'Appraise.wsgi.application'
@@ -194,7 +197,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.environ.get('APPRAISE_STATIC_ROOT', os.path.join(BASE_DIR, 'static'))
 
 # TODO: This is a temporary hack for running Appraise locally for regression
 # testing and development as WhiteNoise staticfiles app does not work.
@@ -208,7 +211,7 @@ if MEDIA_ROOT and MEDIA_ROOT[-1] != '/':
 
 # Base context for all views.
 BASE_CONTEXT = {
-    'commit_tag': '#wmt24dev',
+    'commit_tag': '#wmt25dev',
     'title': 'Appraise evaluation system',
     'static_url': STATIC_URL,
 }

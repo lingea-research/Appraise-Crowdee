@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 from collections import defaultdict
 from datetime import datetime
 from hashlib import md5
@@ -65,7 +66,9 @@ def run_quality_control(username):
         _data = _type.objects.filter(createdBy__username=username, completed=True)
         # Get the first result task type available: might not work in all scenarios
         if _data:
-            campaign_opts = set((_data[0].task.campaign.campaignOptions or "").lower().split(";"))
+            campaign_opts = set(
+                (_data[0].task.campaign.campaignOptions or "").lower().split(";")
+            )
             result_type = _type
             break
 

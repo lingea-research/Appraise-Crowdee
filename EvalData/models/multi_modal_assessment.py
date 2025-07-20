@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 # pylint: disable=C0103,C0330,no-member
 import sys
 from collections import defaultdict
@@ -293,11 +294,7 @@ class MultiModalAssessmentTask(BaseMetadata):
             # TODO: implement proper support for multiple json files in archive.
             for batch_json_file in batch_json_files:
                 batch_content = batch_zip.read(batch_json_file).decode('utf-8')
-                # Python 3.9 removed 'encoding' from json.loads
-                if sys.version_info >= (3, 9, 0):
-                    batch_json = loads(batch_content)
-                else:
-                    batch_json = loads(batch_content, encoding='utf-8')
+                batch_json = loads(batch_content)
 
         else:
             batch_json = loads(str(batch_file.read(), encoding='utf-8'))
@@ -332,7 +329,7 @@ class MultiModalAssessmentTask(BaseMetadata):
                 if current_length_text > max_length_text:
                     print(
                         current_length_text,
-                        item['targetText'].encode('utf-8'),
+                        item['targetText'],
                     )
                     max_length_text = current_length_text
 
@@ -348,13 +345,7 @@ class MultiModalAssessmentTask(BaseMetadata):
                 )
                 new_items.append(new_item)
 
-            if not len(new_items) == 100:
-                _msg = 'Expected 100 items for task but found {0}'.format(
-                    len(new_items)
-                )
-                LOGGER.warn(_msg)
-                continue
-
+            LOGGER.info(f'The task has {len(new_items)} items')
             current_count += 1
 
             # for new_item in new_items:

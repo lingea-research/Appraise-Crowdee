@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 # pylint: disable=C0103,C0330,no-member
 from datetime import timezone
 
@@ -90,7 +91,7 @@ class ObjectID(models.Model):
 
             _code = '{0}.objects.get(id={1})'.format(self.typeName, self.primaryID)
 
-            # Hack for Python 3.5.2
+            # TODO: Hack
             from EvalData.models import (
                 DataAssessmentTask,
                 DirectAssessmentTask,

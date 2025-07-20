@@ -265,23 +265,21 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         # get all items (100) and try to find resul
         all_items = [
             (
-                item, 
+                item,
                 DirectAssessmentDocumentResult.objects.filter(
                     item=item, activated=False, completed=True, createdBy=user
-                ).last()
+                ).last(),
             )
             for item in self.items.all().order_by('id')
         ]
         unfinished_items = [i for i, r in all_items if not r]
-        
+
         docs_total = len({i.documentID for i, r in all_items})
-        items_completed = len([
-            i for i, r in all_items if r and r.completed
-        ])
-        docs_completed = docs_total - len({
-            i.documentID for i, r in all_items if r is None or not r.completed
-        })
-        
+        items_completed = len([i for i, r in all_items if r and r.completed])
+        docs_completed = docs_total - len(
+            {i.documentID for i, r in all_items if r is None or not r.completed}
+        )
+
         if not unfinished_items:
             return (
                 None,
@@ -295,7 +293,8 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         # things are ordered with batch order
         next_item = unfinished_items[0]
         doc_items_all = [
-            (i, r) for i, r in all_items
+            (i, r)
+            for i, r in all_items
             # match document name and system
             if i.documentID == next_item.documentID and i.targetID == next_item.targetID
         ]
@@ -308,12 +307,12 @@ class DirectAssessmentDocumentTask(BaseMetadata):
         )
 
         return (
-            next_item,         # the first unannotated item for the user
-            items_completed,   # the number of completed items in the task
-            docs_completed,    # the number of completed documents in the task
-            doc_items,         # all items from the current document
-            doc_items_results, # all score results from the current document
-            docs_total,        # the total number of documents in the task
+            next_item,  # the first unannotated item for the user
+            items_completed,  # the number of completed items in the task
+            docs_completed,  # the number of completed documents in the task
+            doc_items,  # all items from the current document
+            doc_items_results,  # all score results from the current document
+            docs_total,  # the total number of documents in the task
         )
 
     def get_results_for_each_item(self, block_items, user):
@@ -398,11 +397,7 @@ class DirectAssessmentDocumentTask(BaseMetadata):
             # TODO: implement proper support for multiple json files in archive.
             for batch_json_file in batch_json_files:
                 batch_content = batch_zip.read(batch_json_file).decode('utf-8')
-                # Python 3.9 removed 'encoding' from json.loads
-                if sys.version_info >= (3, 9, 0):
-                    batch_json = loads(batch_content)
-                else:
-                    batch_json = loads(batch_content, encoding='utf-8')
+                batch_json = loads(batch_content)
 
         else:
             batch_json = loads(str(batch_file.read(), encoding='utf-8'))
@@ -438,7 +433,7 @@ class DirectAssessmentDocumentTask(BaseMetadata):
                 if current_length_text > max_length_text:
                     print(
                         current_length_text,
-                        item['targetText'].encode('utf-8'),
+                        item['targetText'],
                     )
                     max_length_text = current_length_text
 
@@ -462,13 +457,7 @@ class DirectAssessmentDocumentTask(BaseMetadata):
                 if item['isCompleteDocument']:
                     doc_items += 1
 
-            if (len(new_items) - doc_items) != 100:
-                _msg = 'Expected 100 items for task but found {0}'.format(
-                    len(new_items) - doc_items
-                )
-                LOGGER.warn(_msg)
-                continue
-
+            LOGGER.info(f'The task has {len(new_items)} items')
             current_count += 1
 
             for new_item in new_items:
@@ -602,18 +591,23 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
     @classmethod
     def get_time_for_user(cls, user):
         results = cls.objects.filter(createdBy=user, activated=False, completed=True)
-        is_esa_or_mqm = any([
-            "esa" in result.task.campaign.campaignOptions.lower().split(";") or
-            "mqm" in result.task.campaign.campaignOptions.lower().split(";")
-            for result in results
-        ])
+        is_esa_or_mqm = any(
+            [
+                "esa" in result.task.campaign.campaignOptions.lower().split(";")
+                or "mqm" in result.task.campaign.campaignOptions.lower().split(";")
+                for result in results
+            ]
+        )
 
         if is_esa_or_mqm:
             # for ESA or MQM, do minimum and maximum from each doc
             import collections
+
             timestamps = collections.defaultdict(list)
             for result in results:
-                timestamps[result.item.documentID+" ||| "+result.item.targetID].append((result.start_time, result.end_time))
+                timestamps[
+                    result.item.documentID + " ||| " + result.item.targetID
+                ].append((result.start_time, result.end_time))
 
             # timestamps are document-level now, but that does not change anything later on
             timestamps = [
@@ -624,7 +618,6 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
             timestamps = []
             for result in results:
                 timestamps.append((result.start_time, result.end_time))
-
 
         return seconds_to_timedelta(_compute_user_total_annotation_time(timestamps))
 
@@ -940,8 +933,10 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
         qs = cls.objects.filter(completed=True, item__itemType__in=item_types)
 
         # If campaign ID is given, only return results for this campaign.
+        campaign_name = None
         if campaign_id:
             qs = qs.filter(task__campaign__id=campaign_id)
+            campaign_opts = str(qs.first().task.campaign.campaignOptions)
 
         if not include_inactive:
             qs = qs.filter(createdBy__is_active=True)
@@ -958,6 +953,17 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
             'item__isCompleteDocument',  # isCompleteDocument
             'mqm',  # MQM
         )
+
+        # This is a hack for having to use sourceID for pseudo-contrastive ESA
+        # campaigns, where we cannot use targetID to uniquely distinguish all
+        # systems. We cannot, because targetID must be identical for all items
+        # within a document
+        if campaign_opts and ("contrastiveesa" in campaign_opts.lower()):
+            attributes_to_extract = (
+                *attributes_to_extract[:1],
+                'item__sourceID',
+                *attributes_to_extract[2:],
+            )
 
         if extended_csv:
             attributes_to_extract = attributes_to_extract + (

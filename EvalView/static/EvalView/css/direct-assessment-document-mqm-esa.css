@@ -112,6 +112,13 @@
     opacity: 90%;
 }
 
+#instructions-show {
+    font-weight: bold;
+    background-color: #31708f90;
+    width: 150pt;
+    color: black;
+}
+
 .alert_message {
     position: fixed;
     top: 25px;
@@ -128,7 +135,6 @@
     padding: 2px 10px;
     min-width: 130px;
 }
-
 
 .mqm_char:hover:not([selected]):not([in_mqm]) {
     outline: 2px solid #ccc;

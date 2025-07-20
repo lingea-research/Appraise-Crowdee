@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 # pylint: disable=unused-import,import-error
 from django.conf.urls import handler404
 from django.conf.urls import handler500

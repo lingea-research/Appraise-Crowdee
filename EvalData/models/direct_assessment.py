@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 # pylint: disable=C0103,C0330,no-member
 import sys
 from collections import defaultdict
@@ -311,10 +312,7 @@ class DirectAssessmentTask(BaseMetadata):
                 )
                 new_items.append(new_item)
 
-            if len(new_items) != 100:
-                LOGGER.error(f'Expected 100 items for task but found {len(new_items)}')
-                continue
-
+            LOGGER.info(f'The task has {len(new_items)} items')
             current_count += 1
             batch_meta.textpair_set.add(*new_items, bulk=False)
             batch_meta.save()

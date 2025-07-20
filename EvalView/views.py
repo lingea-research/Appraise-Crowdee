@@ -3,6 +3,7 @@ Appraise evaluation framework
 
 See LICENSE for usage details
 """
+
 from datetime import datetime
 from datetime import timezone
 
@@ -1089,17 +1090,13 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
         end_timestamp = request.POST.get('end_timestamp', None)
         ajax = bool(request.POST.get('ajax', None) == 'True')
 
-
         db_item = current_task.items.filter(
             itemID=item_id,
             id=task_id,
         )
 
-
         if len(db_item) == 0:
-            error_msg = (
-                f'We could not find item {item_id} in task {task_id}.'
-            )
+            error_msg = f'We could not find item {item_id} in task {task_id}.'
             LOGGER.error(error_msg)
             item_saved = False
         elif len(db_item) > 1:
@@ -1154,6 +1151,14 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
             # Send response to the Ajax POST request
             return JsonResponse(context)
 
+    # TODO: hotfix for WMT24
+    # Tracking issue: https://github.com/AppraiseDev/Appraise/issues/185
+    for item in doc_items:
+        # don't escape HTML video or images
+        if item.sourceText.strip().startswith("<video") or item.sourceText.strip().startswith("<img"):
+            continue
+        item.sourceText = escape(item.sourceText)
+
     # Get item scores from the latest corresponding results
     doc_items_results = [
         {
@@ -1173,6 +1178,22 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
     source_language = current_task.marketSourceLanguage()
     target_language = current_task.marketTargetLanguage()
 
+    guidelines = ""
+    if 'contrastiveesa' in campaign_opts:
+        # escape <br/> tags in the source and target texts
+        for item in doc_items:
+            item.sourceText = item.sourceText.replace(
+                "&lt;eos&gt;", "<code>&lt;eos&gt;</code>"
+            ).replace("&lt;br/&gt;", "<br/>")
+            # HTML-esaping on the target text will not work because MQM/ESA tag insertion prevents it
+        guidelines = (
+            'You are provided with a text in {0} and its candidate translation(s) into {1}. '
+            'Please assess the quality of the translation(s) following the detailed guidelines below. '.format(
+                source_language,
+                target_language,
+            )
+        )
+
     # A part of context used in responses to both Ajax and standard POST requests
     context = {
         'active_page': 'direct-assessment-document',
@@ -1188,6 +1209,7 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
         # Task variations
         'ui_lang': "enu",
         'mqm_type': 'ESA' if 'esa' in campaign_opts else "MQM",
+        'guidelines': guidelines,
     }
 
     if ajax:
@@ -1597,6 +1619,7 @@ def pairwise_assessment(request, code=None, campaign_name=None):
     extra_guidelines = False
     doc_guidelines = False
     guidelines_popup = False
+    dialect_guidelines = False
 
     if 'reportcriticalerror' in campaign_opts:
         critical_error = True
@@ -1650,6 +1673,44 @@ def pairwise_assessment(request, code=None, campaign_name=None):
         candidate2_text = candidate2_text.replace(
             "&lt;eos&gt;", "<code>&lt;eos&gt;</code>"
         ).replace("&lt;br/&gt;", "<br/>")
+
+    dialect_guidelines = any("dialectsguidelines" in opt for opt in campaign_opts)
+
+    if dialect_guidelines:
+        tgt_code = current_task.marketTargetLanguageCode()
+        dialect = target_language
+
+        # DialectsGuidelinesA asks for the main dialect for specific languages (fra, ptb, esn)
+        if 'dialectsguidelinesa' in campaign_opts:
+            if tgt_code == 'fra':
+                dialect = "European French (Européen Français)"
+            if tgt_code == 'por':
+                dialect = "Brazilian Portuguese (Português do Brasil)"
+            if tgt_code == 'spa':
+                dialect = "European Spanish (Español Europeo)"
+        # DialectsGuidelinesB asks for the secondary dialect for specific languages (frc, ptg, esj)
+        elif 'dialectsguidelinesb' in campaign_opts:
+            if tgt_code == 'fra':
+                dialect = "Canadian French (Français Canadien)"
+            if tgt_code == 'por':
+                dialect = "European Portuguese (Português Europeu)"
+            if tgt_code == 'spa':
+                dialect = "Latin American Spanish (Español Latinoamericano)"
+
+        # "If there are no significant differences between the candidates, please assign equal scores using the 'Match sliders' button. "
+        priming_question_text = (
+            "Above you see a segment in {0} and below its corresponding two candidate translations in {1}. "
+            "Please evaluate the quality of the candidate translations, "
+            "<b class='lang-emph'><u>focusing specifically on the use of the {2} dialect</u></b>. "
+            "Pay close attention to dialect-specific language, including vocabulary, idiomatic expressions, and cultural references. "
+            "<br/><br/>"
+            "In addition to dialect-specific considerations, please also account for common translation errors, "
+            "such as accuracy and fluency, as detailed below.".format(
+                source_language,
+                target_language,
+                dialect,
+            )
+        )
 
     context = {
         'active_page': 'pairwise-assessment',
@@ -2217,7 +2278,7 @@ def pairwise_assessment_document(request, code=None, campaign_name=None):
     new_ui = 'newui' in campaign_opts
     escape_eos = 'escapeeos' in campaign_opts
     escape_br = 'escapebr' in campaign_opts
-    highlight_style ='highlightstyle' in campaign_opts
+    highlight_style = 'highlightstyle' in campaign_opts
 
     # Get item scores from the latest corresponding results
     block_scores = []
@@ -2246,12 +2307,8 @@ def pairwise_assessment_document(request, code=None, campaign_name=None):
 
         if escape_br:
             _source_text = _source_text.replace("&lt;br/&gt;", "<br/>")
-            _candidate1_text = _candidate1_text.replace(
-                "&lt;br/&gt;", "<br/>"
-            )
-            _candidate2_text = _candidate2_text.replace(
-                "&lt;br/&gt;", "<br/>"
-            )
+            _candidate1_text = _candidate1_text.replace("&lt;br/&gt;", "<br/>")
+            _candidate2_text = _candidate2_text.replace("&lt;br/&gt;", "<br/>")
 
         item_scores = {
             'completed': bool(result and result.score1 > -1),
