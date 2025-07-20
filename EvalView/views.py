@@ -1133,10 +1133,11 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
     (
         next_item,
         items_completed,
+        items_total,
         docs_completed,
+        docs_total,
         doc_items,
         doc_items_results,
-        docs_total,
     ) = current_task.next_document_for_user_mqmesa(request.user)
 
     if not next_item:
@@ -1151,11 +1152,15 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
             # Send response to the Ajax POST request
             return JsonResponse(context)
 
-    # TODO: hotfix for WMT24
+    # TODO: hotfix for WMT24 and WMT25
     # Tracking issue: https://github.com/AppraiseDev/Appraise/issues/185
     for item in doc_items:
-        # don't escape HTML video or images
-        if item.sourceText.strip().startswith("<video") or item.sourceText.strip().startswith("<img"):
+        # don't escape HTML video, audio or images
+        if (
+            item.sourceText.strip().startswith("<video") or
+            item.sourceText.strip().startswith("<audio") or
+            item.sourceText.strip().startswith("<img")
+        ):
             continue
         item.sourceText = escape(item.sourceText)
 
@@ -1201,6 +1206,7 @@ def direct_assessment_document_mqmesa(campaign, current_task, request):
         'task_id': next_item.id,
         'document_id': next_item.documentID,
         'items_completed': items_completed,
+        'items_total': items_total,
         'docs_completed': docs_completed,
         'docs_total': docs_total,
         'source_language': source_language,
