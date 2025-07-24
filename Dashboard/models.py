@@ -225,6 +225,7 @@ LANGUAGE_CODES_AND_NAMES = {
     'kas': 'Kashmiri (كٲشُر)',
     'mni': 'Meitei (ꯃꯩꯇꯩꯂꯣꯟ)',
     'sat': 'Santali (ᱥᱟᱱᱛᱟᱲᱤ)',
+    'mas': 'Maasai (Ol Maa)',
 }
 
 # All sign language codes
