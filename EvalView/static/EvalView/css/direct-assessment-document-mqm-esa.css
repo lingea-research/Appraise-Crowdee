@@ -71,6 +71,7 @@
 
 .source-text > audio, .source-text > video {
     width: 100%;
+    max-height: 550px;
 }
 
 .source-text > img {
