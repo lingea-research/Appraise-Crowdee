@@ -177,11 +177,6 @@ $(document).ready(() => {
     let instructions_show = localStorage.getItem("appraise-instructions-show")
     if (instructions_show == null) instructions_show = true;
     else instructions_show = instructions_show == "true";
-    console.log(
-        localStorage.getItem("appraise-instructions-show"),
-        localStorage.getItem("appraise-instructions-show") == null,
-        instructions_show,
-    )
 
     $("#instructions-show").on("click", () => {
         instructions_show = !instructions_show;

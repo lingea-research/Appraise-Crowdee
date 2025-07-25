@@ -34,8 +34,23 @@
     color: black;
 }
 
-.quotelike {
-    border-left: 5px solid #ddd;
+
+.language_tag_holder {
+    position: relative;
+}
+
+
+.language_tag {
+    /* transform: rotate(-90deg); */
+    transform-origin: top left;
+    width: 200px;
+    display: inline-block;
+    position: absolute;
+    text-align: right;
+    left: -210px;
+    top: 15px;
+    color: #257;
+    font-size: small;
 }
 
 .quotelike {
@@ -52,6 +67,7 @@
 
 .item-box {
     margin-bottom: 20px;
+    border-radius: 4px;
 }
 
 .target-text {
@@ -127,6 +143,12 @@
     color: black;
 }
 
+#instructions {
+    background-color: #d9edf7;
+    padding: 10px;
+    border-radius: 4px;
+}
+
 .alert_message {
     position: fixed;
     top: 25px;
@@ -191,4 +213,15 @@
 
 .ui-widget-content {
     border: none !important;
+}
+
+
+/* override defaults */
+.alert-info {
+    border: none;
+    color: #257;
+}
+.navbar-fixed-top {
+    position: absolute;
+    top: -2px;
 }

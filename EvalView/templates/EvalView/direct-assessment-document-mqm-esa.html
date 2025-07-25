@@ -35,14 +35,13 @@
     </table>
 </div>
 
-<div class="question-box" id="tutorial-text" style="display: none; font-size: large; font-weight: bold;">
-    In the first two pages we will walk you through the tutorial.
-    It is available only in English to German but knowledge of German is not needed.
-    If you already went through the tutorial you can
-    <input type="button" value="skip the tutorial" id="skip-tutorial">.
-</div>
 
 <div class="question-box" id="instructions">
+    <div class="question-box" id="tutorial-text" style="display: none; font-weight: bold;">
+        In the first two pages we will walk you through the tutorial.
+        If you already went through the tutorial you can
+        <input type="button" value="skip the tutorial" id="skip-tutorial">.
+    </div>
     {% if guidelines %}
     <p>{{ guidelines }}</p>
     {% endif %}
@@ -81,11 +80,18 @@
 
         <div class="source-box">
             <div class="tutorial-text"></div>
+            <div class="language_tag_holder">
+                <div class="language_tag">{{source_language}}</div>
+            </div>
+            
             <div class="source-text">
                 <!-- NOTE: "safe" means that HTML can be injected, which is needed for video! -->
                 {{ item.sourceText|safe }}
             </div>
-
+            <hr style="border-top: 2pt solid #ccc; margin: 0;">
+            <div class="language_tag_holder">
+                <div class="language_tag">{{target_language}}</div>
+            </div>
             <div class="target-text">
                 {{item.targetText}}
             </div>
