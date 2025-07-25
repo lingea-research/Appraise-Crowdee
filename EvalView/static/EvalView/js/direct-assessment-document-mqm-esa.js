@@ -174,8 +174,9 @@ $(document).ready(() => {
     // show submit button only on MQM and not ESA
     $(".button-submit").toggle(MQM_TYPE == "MQM")
 
-    let instructions_show = localStorage.getItem("appraise-instructions-show") == "true"
+    let instructions_show = localStorage.getItem("appraise-instructions-show")
     if (instructions_show == null) instructions_show = true;
+    else instructions_show = instructions_show == "true";
 
     $("#instructions-show").on("click", () => {
         instructions_show = !instructions_show;
@@ -194,9 +195,8 @@ function _all_sentences_scored() {
     return items_left == 0;
 }
 
-function _change_item_status_icon(item_box, icon_name, status_text) {
+function _change_item_status_icon(item_box, icon_name) {
     let icon_box = item_box.find('.status-indicator').removeClass('glyphicon-refresh glyphicon-ok glyphicon-flag');
-    item_box.find(".status-text").text(status_text)
     icon_box.addClass(`glyphicon-${icon_name}`)
 }
 
@@ -210,21 +210,21 @@ function submit_form_ajax(item_box) {
         dataType: 'json',
         beforeSend: function () {
             console.log('Sending AJAX request, item-id=', item_box.data('item-id'));
-            _change_item_status_icon(item_box, 'refresh', "Uploading");
+            _change_item_status_icon(item_box, 'refresh');
         },
         success: function (data) {
             console.log(`Success, saved=${data.saved} next_item=${data.item_id}`);
             if (data.saved) {
-                _change_item_status_icon(item_box, 'ok', "Completed");
+                _change_item_status_icon(item_box, 'ok');
 
             } else {
-                _change_item_status_icon(item_box, 'none', "Upload failed");
+                _change_item_status_icon(item_box, 'warning-sign');
                 _show_error_box(data.error_msg, 10_000);
             }
         },
         error: function (x, s, t) {
             console.log('Error:', x, s, t);
-            _change_item_status_icon(item_box, 'none', "Upload failed");
+            _change_item_status_icon(item_box, 'warning-sign');
             _show_error_box(
                 'An unrecognized error has occured. ' +
                 'Please reload the page or try again in a moment. ',
@@ -513,10 +513,10 @@ class MQMItemHandler {
 
     check_status() {
         if (this.el.attr("data-item-completed") == "True") {
-            _change_item_status_icon(this.el, "ok", "Completed")
+            _change_item_status_icon(this.el, "ok")
             this.el.find(".button-submit").hide()
         } else {
-            _change_item_status_icon(this.el, "flag", "Unfinished")
+            _change_item_status_icon(this.el, "flag")
         }
     }
 

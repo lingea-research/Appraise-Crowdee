@@ -34,8 +34,47 @@
     color: black;
 }
 
-.quotelike {
-    border-left: 5px solid #ddd;
+
+.status-indicator {
+    display: inline-block;
+    position: absolute;
+    left: -35px;
+    top: 10px;
+    font-size: small;
+    width: 20px;
+    margin: 0px;
+    padding: 0px;
+}
+
+.button-reset {
+    display: inline-block;
+    position: absolute;
+    left: -40px;
+    top: 40px;
+    font-size: small;
+    background-color: transparent !important;
+    border: none;
+    width: 20px;
+    margin: 0px;
+    padding: 0px;
+}
+
+.button-submit {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.target-box {
+    position: relative;
+    margin-bottom: -10px;
+}
+
+.language_tag {
+    /* transform: rotate(-90deg); */
+    float: right;
+    color: #777;
+    font-size: small;
 }
 
 .quotelike {
@@ -52,6 +91,7 @@
 
 .item-box {
     margin-bottom: 20px;
+    border-radius: 4px;
 }
 
 .target-text {
@@ -71,6 +111,7 @@
 
 .source-text > audio, .source-text > video {
     width: 100%;
+    max-height: 550px;
 }
 
 .source-text > img {
@@ -124,6 +165,12 @@
     background-color: #31708f90;
     width: 150pt;
     color: black;
+}
+
+#instructions {
+    background-color: #d9edf7;
+    padding: 10px;
+    border-radius: 4px;
 }
 
 .alert_message {
@@ -190,4 +237,15 @@
 
 .ui-widget-content {
     border: none !important;
+}
+
+
+/* override defaults */
+.alert-info {
+    border: none;
+    color: #257;
+}
+.navbar-fixed-top {
+    position: absolute;
+    top: -2px;
 }
