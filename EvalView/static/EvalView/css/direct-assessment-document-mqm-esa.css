@@ -35,21 +35,45 @@
 }
 
 
-.language_tag_holder {
-    position: relative;
+.status-indicator {
+    display: inline-block;
+    position: absolute;
+    left: -35px;
+    top: 10px;
+    font-size: small;
+    width: 20px;
+    margin: 0px;
+    padding: 0px;
 }
 
+.button-reset {
+    display: inline-block;
+    position: absolute;
+    left: -40px;
+    top: 40px;
+    font-size: small;
+    background-color: transparent !important;
+    border: none;
+    width: 20px;
+    margin: 0px;
+    padding: 0px;
+}
+
+.button-submit {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.target-box {
+    position: relative;
+    margin-bottom: -10px;
+}
 
 .language_tag {
     /* transform: rotate(-90deg); */
-    transform-origin: top left;
-    width: 200px;
-    display: inline-block;
-    position: absolute;
-    text-align: right;
-    left: -210px;
-    top: 15px;
-    color: #257;
+    float: right;
+    color: #777;
     font-size: small;
 }
 

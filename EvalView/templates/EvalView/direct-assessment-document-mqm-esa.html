@@ -101,23 +101,12 @@
             <div class="row esa_slider">
                 {% include 'EvalView/_slider-mqm-esa.html' %}
             </div>
-
-            <table class="row action-box">
-                <tr>
-                    <td style="width:30%;text-align:left;">
-                        <button class="btn button-reset" accesskey="2" type="reset">Reset</button>
-                    </td>
-                    <td style="width: 40%; text-align: center;">
-                        <span class="status-indicator glyphicon glyphicon-ok"></span>
-                        <span class="status-text">Item status</span>
-                    </td>
-                    <td style="width:30%;text-align:right;">
-                        <button class="btn button-submit btn-primary" name="next_button" accesskey="1" type="submit"
-                            value="{{ item.itemID }}"> Mark complete
-                        </button>
-                    </td>
-                </tr>
-            </table>
+            <span class="status-indicator glyphicon glyphicon-ok"></span>
+            <button class="button-reset glyphicon glyphicon-trash" accesskey="2" type="reset"></button>
+            
+            <button class="btn button-submit btn-primary" name="next_button" accesskey="1" type="submit"
+                value="{{ item.itemID }}"> Mark complete
+            </button>
         </div>
     </form>
 </div>
