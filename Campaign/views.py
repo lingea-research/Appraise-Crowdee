@@ -243,8 +243,12 @@ def campaign_status_esa(campaign) -> str:
     td, th {
         padding: 5px;
     }
-    </style>
+    * {
+    font-family: monospace;
+    }
+    </style>\n
     """
+    out_str += f"<h1>{campaign.campaignName}</h1>\n"
     out_str += "<table>\n"
     out_str += "<tr><th>Username</th><th>Progress</th><th>First Modified</th><th>Last Modified</th><th>Annotation Time</th></tr>\n"
 
@@ -252,12 +256,10 @@ def campaign_status_esa(campaign) -> str:
         for user in team.members.all():
             if user.is_staff:
                 continue
-            
             out_str += "<tr>"
             _data = DirectAssessmentDocumentResult.objects.filter(
                 createdBy=user, completed=True, task__campaign=campaign.id
             )
-
             total_count = None
             if _data:
                 _data_all = DirectAssessmentDocumentTask.objects.filter(campaign=campaign.id)
@@ -274,7 +276,7 @@ def campaign_status_esa(campaign) -> str:
                         break
             if total_count is None:
                 out_str += f"<td>{user.username} 💤</td>"
-                out_str += f"<td>0%</td>"
+                out_str += "<td></td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
             else:
@@ -285,8 +287,15 @@ def campaign_status_esa(campaign) -> str:
                 out_str += f"<td>{len(_data)}/{total_count} ({len(_data) / total_count:.0%})</td>"
                 first_modified = min([x.start_time for x in _data])
                 last_modified = max([x.end_time for x in _data])
-                out_str += f"<td>{str(datetime(1970, 1, 1) + seconds_to_timedelta(first_modified)).split('.')[0]}</td>"
-                out_str += f"<td>{str(datetime(1970, 1, 1) + seconds_to_timedelta(last_modified)).split('.')[0]}</td>"
+
+                first_modified_str = str(datetime(1970, 1, 1) + seconds_to_timedelta(first_modified)).split('.')[0]
+                last_modified_str = str(datetime(1970, 1, 1) + seconds_to_timedelta(last_modified)).split('.')[0]
+                # remove seconds
+                first_modified_str = ":".join(first_modified_str.split(":")[:-1]) 
+                last_modified_str = ":".join(last_modified_str.split(":")[:-1])
+
+                out_str += f"<td>{first_modified_str}</td>"
+                out_str += f"<td>{last_modified_str}</td>"
 
                 times = collections.defaultdict()
                 for item in _data:
