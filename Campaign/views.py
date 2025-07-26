@@ -23,6 +23,8 @@ from EvalData.models import PairwiseAssessmentDocumentResult
 from EvalData.models import PairwiseAssessmentResult
 from EvalData.models import seconds_to_timedelta
 from EvalData.models import TASK_DEFINITIONS
+from EvalData.models import TaskAgenda
+from EvalData.models.direct_assessment_document import DirectAssessmentDocumentTask
 
 # pylint: disable=import-error
 
@@ -51,19 +53,27 @@ def campaign_status(request, campaign_name, sort_key=2):
         _msg = 'Failure to identify campaign {0}'.format(campaign_name)
         return HttpResponse(_msg, content_type='text/plain')
 
+    try:
+        campaign_opts = campaign.campaignOptions.lower().split(";")
+        # may raise KeyError
+        result_type = RESULT_TYPE_BY_CLASS_NAME[campaign.get_campaign_type()]
+    except KeyError as exc:
+        LOGGER.debug(
+            f'Invalid campaign type {campaign.get_campaign_type()} for campaign {campaign.campaignName}'
+        )
+        LOGGER.error(exc)
+        return HttpResponse(
+            'Invalid campaign type for campaign {0}'.format(campaign.campaignName),
+            content_type='text/plain',
+        )
+
+    # special handling for ESA
+    if "esa" in campaign_opts:
+        return campaign_status_esa(campaign)
+
     _out = []
     for team in campaign.teams.all():
         for user in team.members.all():
-            try:
-                campaign_opts = campaign.campaignOptions.lower().split(";")
-                # may raise KeyError
-                result_type = RESULT_TYPE_BY_CLASS_NAME[campaign.get_campaign_type()]
-            except KeyError as exc:
-                LOGGER.debug(
-                    f'Invalid campaign type {campaign.get_campaign_type()} for campaign {campaign.campaignName}'
-                )
-                LOGGER.error(exc)
-                continue
 
             _data = result_type.objects.filter(
                 createdBy=user, completed=True, task__campaign=campaign.id
@@ -118,29 +128,6 @@ def campaign_status(request, campaign_name, sort_key=2):
                     (x[0], x[1], -len(json.loads(x[2])), x[3], x[4], x[5], x[6])
                     for x in _data
                 ]
-            elif "esa" in campaign_opts:
-                is_mqm_or_esa = True
-                _data = _data.values_list(
-                    'start_time',
-                    'end_time',
-                    'score',
-                    'item__itemID',
-                    'item__targetID',
-                    'item__itemType',
-                    'item__id',
-                    'item__documentID',
-                )
-                # compute time override based on document times
-                import collections
-
-                _time_pairs = collections.defaultdict(list)
-                for x in _data:
-                    _time_pairs[x[7] + " ||| " + x[4]].append((x[0], x[1]))
-                _time_pairs = [
-                    (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
-                    for doc, doc_v in _time_pairs.items()
-                ]
-                _data = [(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in _data]
             else:
                 _data = _data.values_list(
                     'start_time',
@@ -243,6 +230,131 @@ def campaign_status(request, campaign_name, sort_key=2):
         _txt.append(_local_out)
 
     return HttpResponse(u'\n'.join(_txt), content_type='text/plain')
+
+
+def campaign_status_esa(campaign) -> str:
+    import collections
+    out_str = """
+    <meta charset="UTF-8">
+
+    <style>
+    table, tr, td, th {
+        border: 1px solid black; border-collapse: collapse;
+    }
+    td, th {
+        padding: 5px;
+    }
+    * {
+    font-family: monospace;
+    }
+    </style>\n
+    """
+    out_str += f"<h1>{campaign.campaignName}</h1>\n"
+    out_str += "<table>\n"
+    out_str += "<tr>" + "".join(
+        f"<th>{x}</th>" for x in ["Username", "Progress", "First Modified", "Last Modified", "Time (Last-First)", "Time (Real)"]
+    ) + "</tr>\n"
+
+    for team in campaign.teams.all():
+        for user in team.members.all():
+            if user.is_staff:
+                continue
+            out_str += "<tr>"
+
+            # Get the task for this user even when there's no completed data
+            task = None
+
+            # First try to get the task from TaskAgenda
+            agenda = TaskAgenda.objects.filter(user=user, campaign=campaign).first()
+            if agenda:
+                # Try to get an open or completed task from the agenda
+                for serialized_task in agenda.serialized_open_tasks():
+                    potential_task = serialized_task.get_object_instance()
+                    if isinstance(potential_task, DirectAssessmentDocumentTask):
+                        task = potential_task
+                        break
+                # If no open task, try completed tasks
+                if not task:
+                    for serialized_task in agenda._completed_tasks.all():
+                        potential_task = serialized_task.get_object_instance()
+                        if isinstance(potential_task, DirectAssessmentDocumentTask):
+                            task = potential_task
+                            break
+
+            # Get the completed data for this user
+            _data = DirectAssessmentDocumentResult.objects.filter(
+                createdBy=user, completed=True, task__campaign=campaign.id
+            )
+
+            # If no data, show 0 progress or show that no task is assigned
+            if not _data:
+                if task:
+                    total_count = task.items.count()
+                    out_str += f"<td>{user.username} 💤</td>"
+                    out_str += f"<td>0/{total_count} (0%)</td>"
+                else:
+                    # No task assigned to this user
+                    out_str += f"<td>{user.username} 💤</td>"
+                    out_str += "<td>No task assigned</td>"
+                out_str += "<td></td>"
+                out_str += "<td></td>"
+                out_str += "<td></td>"
+                out_str += "<td></td>"
+
+            # If we have data, show the progress
+            else:
+                if not task:
+                    # Fallback to checking the first result's task for the task ID
+                    task = DirectAssessmentDocumentTask.objects.filter(id=_data[0].task_id).first()
+                if not task:
+                    # Skip this user if we can't find the task
+                    out_str += f"<td>{user.username} ❌</td>"
+                    out_str += "<td>Task not found</td>"
+                    out_str += "<td></td>"
+                    out_str += "<td></td>"
+                    out_str += "<td></td>"
+                    out_str += "<td></td>"
+                    out_str += "</tr>\n"
+                    continue
+
+                total_count = task.items.count()
+                if total_count == len(_data):
+                    out_str += f"<td>{user.username} ✅</td>"
+                else:
+                    out_str += f"<td>{user.username} 🛠️</td>"
+                out_str += f"<td>{len(_data)}/{total_count} ({len(_data) / total_count:.0%})</td>"
+                first_modified = min([x.start_time for x in _data])
+                last_modified = max([x.end_time for x in _data])
+
+                first_modified_str = str(datetime(1970, 1, 1) + seconds_to_timedelta(first_modified)).split('.')[0]
+                last_modified_str = str(datetime(1970, 1, 1) + seconds_to_timedelta(last_modified)).split('.')[0]
+                # remove seconds
+                first_modified_str = ":".join(first_modified_str.split(":")[:-1])
+                last_modified_str = ":".join(last_modified_str.split(":")[:-1])
+
+                out_str += f"<td>{first_modified_str}</td>"
+                out_str += f"<td>{last_modified_str}</td>"
+                annotation_time_upper = last_modified - first_modified
+                annotation_time_upper = f'{int(floor(annotation_time_upper / 3600)):0>2d}h {int(floor((annotation_time_upper % 3600) / 60)):0>2d}m'
+                out_str += f"<td>{annotation_time_upper}</td>"
+
+                times = collections.defaultdict(list)
+                for item in _data:
+                    times[(item.item.documentID, item.item.targetID)].append((item.start_time, item.end_time))
+                times = [
+                    (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
+                    for doc, doc_v in times.items()
+                ]
+
+                annotation_time = sum([b-a for a, b in times])
+                annotation_time = f'{int(floor(annotation_time / 3600)):0>2d}h {int(floor((annotation_time % 3600) / 60)):0>2d}m'
+
+                out_str += f"<td>{annotation_time}</td>"
+
+            out_str += "</tr>\n"
+
+    out_str += "</table>"
+    return HttpResponse(out_str, content_type='text/html')
 
 
 def stat_reliable_testing(_data, campaign_opts, result_type):

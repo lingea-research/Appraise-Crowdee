@@ -263,13 +263,16 @@ class DirectAssessmentDocumentTask(BaseMetadata):
             doc_items_results,
         """
 
-        # get all items (100) and try to find resul
+        # get all items and try to find a matching result
+        # TODO: probably can be optimized better
+
+        items_user = DirectAssessmentDocumentResult.objects.filter(
+            activated=False, completed=True, createdBy=user
+        )
         all_items = [
             (
                 item,
-                DirectAssessmentDocumentResult.objects.filter(
-                    item=item, activated=False, completed=True, createdBy=user
-                ).last(),
+                items_user.filter(item=item).last(),
             )
             for item in self.items.all().order_by('id')
         ]
