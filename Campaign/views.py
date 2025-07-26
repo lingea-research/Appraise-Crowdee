@@ -23,6 +23,7 @@ from EvalData.models import PairwiseAssessmentDocumentResult
 from EvalData.models import PairwiseAssessmentResult
 from EvalData.models import seconds_to_timedelta
 from EvalData.models import TASK_DEFINITIONS
+from EvalData.models import TaskAgenda
 from EvalData.models.direct_assessment_document import DirectAssessmentDocumentTask
 
 # pylint: disable=import-error
@@ -65,7 +66,7 @@ def campaign_status(request, campaign_name, sort_key=2):
             'Invalid campaign type for campaign {0}'.format(campaign.campaignName),
             content_type='text/plain',
         )
-    
+
     # special handling for ESA
     if "esa" in campaign_opts:
         return campaign_status_esa(campaign)
@@ -237,7 +238,7 @@ def campaign_status_esa(campaign) -> str:
     <meta charset="UTF-8">
 
     <style>
-    table, tr, td, th { 
+    table, tr, td, th {
         border: 1px solid black; border-collapse: collapse;
     }
     td, th {
@@ -259,18 +260,63 @@ def campaign_status_esa(campaign) -> str:
             if user.is_staff:
                 continue
             out_str += "<tr>"
+
+            # Get the task for this user even when there's no completed data
+            task = None
+
+            # First try to get the task from TaskAgenda
+            agenda = TaskAgenda.objects.filter(user=user, campaign=campaign).first()
+            if agenda:
+                # Try to get an open or completed task from the agenda
+                for serialized_task in agenda.serialized_open_tasks():
+                    potential_task = serialized_task.get_object_instance()
+                    if isinstance(potential_task, DirectAssessmentDocumentTask):
+                        task = potential_task
+                        break
+                # If no open task, try completed tasks
+                if not task:
+                    for serialized_task in agenda._completed_tasks.all():
+                        potential_task = serialized_task.get_object_instance()
+                        if isinstance(potential_task, DirectAssessmentDocumentTask):
+                            task = potential_task
+                            break
+
+            # Get the completed data for this user
             _data = DirectAssessmentDocumentResult.objects.filter(
                 createdBy=user, completed=True, task__campaign=campaign.id
             )
+
+            # If no data, show 0 progress or show that no task is assigned
             if not _data:
-                out_str += f"<td>{user.username} 💤</td>"
+                if task:
+                    total_count = task.items.count()
+                    out_str += f"<td>{user.username} 💤</td>"
+                    out_str += f"<td>0/{total_count} (0%)</td>"
+                else:
+                    # No task assigned to this user
+                    out_str += f"<td>{user.username} 💤</td>"
+                    out_str += "<td>No task assigned</td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
-                out_str += "<td></td>"
+
+            # If we have data, show the progress
             else:
-                task = DirectAssessmentDocumentTask.objects.filter(id=_data[0].task_id).first()
+                if not task:
+                    # Fallback to checking the first result's task for the task ID
+                    task = DirectAssessmentDocumentTask.objects.filter(id=_data[0].task_id).first()
+                if not task:
+                    # Skip this user if we can't find the task
+                    out_str += f"<td>{user.username} ❌</td>"
+                    out_str += "<td>Task not found</td>"
+                    out_str += "<td></td>"
+                    out_str += "<td></td>"
+                    out_str += "<td></td>"
+                    out_str += "<td></td>"
+                    out_str += "</tr>\n"
+                    continue
+
                 total_count = task.items.count()
                 if total_count == len(_data):
                     out_str += f"<td>{user.username} ✅</td>"
@@ -283,7 +329,7 @@ def campaign_status_esa(campaign) -> str:
                 first_modified_str = str(datetime(1970, 1, 1) + seconds_to_timedelta(first_modified)).split('.')[0]
                 last_modified_str = str(datetime(1970, 1, 1) + seconds_to_timedelta(last_modified)).split('.')[0]
                 # remove seconds
-                first_modified_str = ":".join(first_modified_str.split(":")[:-1]) 
+                first_modified_str = ":".join(first_modified_str.split(":")[:-1])
                 last_modified_str = ":".join(last_modified_str.split(":")[:-1])
 
                 out_str += f"<td>{first_modified_str}</td>"
