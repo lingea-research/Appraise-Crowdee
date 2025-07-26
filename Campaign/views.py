@@ -23,6 +23,7 @@ from EvalData.models import PairwiseAssessmentDocumentResult
 from EvalData.models import PairwiseAssessmentResult
 from EvalData.models import seconds_to_timedelta
 from EvalData.models import TASK_DEFINITIONS
+from EvalData.models.direct_assessment_document import DirectAssessmentDocumentTask
 
 # pylint: disable=import-error
 
@@ -51,19 +52,27 @@ def campaign_status(request, campaign_name, sort_key=2):
         _msg = 'Failure to identify campaign {0}'.format(campaign_name)
         return HttpResponse(_msg, content_type='text/plain')
 
+    try:
+        campaign_opts = campaign.campaignOptions.lower().split(";")
+        # may raise KeyError
+        result_type = RESULT_TYPE_BY_CLASS_NAME[campaign.get_campaign_type()]
+    except KeyError as exc:
+        LOGGER.debug(
+            f'Invalid campaign type {campaign.get_campaign_type()} for campaign {campaign.campaignName}'
+        )
+        LOGGER.error(exc)
+        return HttpResponse(
+            'Invalid campaign type for campaign {0}'.format(campaign.campaignName),
+            content_type='text/plain',
+        )
+    
+    # special handling for ESA
+    if "esa" in campaign_opts:
+        return campaign_status_esa(campaign)
+
     _out = []
     for team in campaign.teams.all():
         for user in team.members.all():
-            try:
-                campaign_opts = campaign.campaignOptions.lower().split(";")
-                # may raise KeyError
-                result_type = RESULT_TYPE_BY_CLASS_NAME[campaign.get_campaign_type()]
-            except KeyError as exc:
-                LOGGER.debug(
-                    f'Invalid campaign type {campaign.get_campaign_type()} for campaign {campaign.campaignName}'
-                )
-                LOGGER.error(exc)
-                continue
 
             _data = result_type.objects.filter(
                 createdBy=user, completed=True, task__campaign=campaign.id
@@ -118,29 +127,6 @@ def campaign_status(request, campaign_name, sort_key=2):
                     (x[0], x[1], -len(json.loads(x[2])), x[3], x[4], x[5], x[6])
                     for x in _data
                 ]
-            elif "esa" in campaign_opts:
-                is_mqm_or_esa = True
-                _data = _data.values_list(
-                    'start_time',
-                    'end_time',
-                    'score',
-                    'item__itemID',
-                    'item__targetID',
-                    'item__itemType',
-                    'item__id',
-                    'item__documentID',
-                )
-                # compute time override based on document times
-                import collections
-
-                _time_pairs = collections.defaultdict(list)
-                for x in _data:
-                    _time_pairs[x[7] + " ||| " + x[4]].append((x[0], x[1]))
-                _time_pairs = [
-                    (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
-                    for doc, doc_v in _time_pairs.items()
-                ]
-                _data = [(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in _data]
             else:
                 _data = _data.values_list(
                     'start_time',
@@ -243,6 +229,79 @@ def campaign_status(request, campaign_name, sort_key=2):
         _txt.append(_local_out)
 
     return HttpResponse(u'\n'.join(_txt), content_type='text/plain')
+
+
+def campaign_status_esa(campaign) -> str:
+    import collections
+    out_str = """
+    <meta charset="UTF-8">
+
+    <style>
+    table, tr, td, th { 
+        border: 1px solid black; border-collapse: collapse;
+    }
+    td, th {
+        padding: 5px;
+    }
+    </style>
+    """
+    out_str += "<table>\n"
+    out_str += "<tr><th>Username</th><th>Progress</th><th>First Modified</th><th>Last Modified</th><th>Annotation Time</th></tr>\n"
+
+    for team in campaign.teams.all():
+        for user in team.members.all():
+            if user.is_staff:
+                continue
+            
+            out_str += "<tr>"
+            _data = DirectAssessmentDocumentResult.objects.filter(
+                createdBy=user, completed=True, task__campaign=campaign.id
+            )
+
+            total_count = None
+            if _data:
+                _data_all = DirectAssessmentDocumentTask.objects.filter(campaign=campaign.id)
+                # brute-force try to find if any task has at least one item annotated by this user
+                for task in _data_all:
+                    for item in task.items.all():
+                        item = DirectAssessmentDocumentResult.objects.filter(
+                            item=item, createdBy=user
+                        ).last()
+                        if item:
+                            total_count = task.items.count()
+                            break
+                    if total_count:
+                        break
+            if total_count is None:
+                out_str += f"<td>{user.username} 💤</td>"
+                out_str += f"<td>0%</td>"
+                out_str += "<td></td>"
+                out_str += "<td></td>"
+            else:
+                if total_count == len(_data):
+                    out_str += f"<td>{user.username} ✅</td>"
+                else:
+                    out_str += f"<td>{user.username} 🛠️</td>"
+                out_str += f"<td>{len(_data)}/{total_count} ({len(_data) / total_count:.0%})</td>"
+                first_modified = min([x.start_time for x in _data])
+                last_modified = max([x.end_time for x in _data])
+                out_str += f"<td>{str(datetime(1970, 1, 1) + seconds_to_timedelta(first_modified)).split('.')[0]}</td>"
+                out_str += f"<td>{str(datetime(1970, 1, 1) + seconds_to_timedelta(last_modified)).split('.')[0]}</td>"
+
+                times = collections.defaultdict()
+                for item in _data:
+                    times[(item.item.documentID, item.item.targetID)] = (item.start_time, item.end_time)
+                annotation_time = sum([b-a for a, b in times.values()])
+                annotation_time = f'{int(floor(annotation_time / 3600)):0>2d}h{int(floor((annotation_time % 3600) / 60)):0>2d}m'
+
+                annotation_time_upper = last_modified - first_modified
+                annotation_time_upper = f'{int(floor(annotation_time_upper / 3600)):0>2d}h{int(floor((annotation_time_upper % 3600) / 60)):0>2d}m'
+
+                out_str += f"<td>{annotation_time} - {annotation_time_upper}</td>"
+            out_str += "</tr>\n"
+
+    out_str += "</table>"
+    return HttpResponse(out_str, content_type='text/html')
 
 
 def stat_reliable_testing(_data, campaign_opts, result_type):
