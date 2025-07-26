@@ -250,7 +250,9 @@ def campaign_status_esa(campaign) -> str:
     """
     out_str += f"<h1>{campaign.campaignName}</h1>\n"
     out_str += "<table>\n"
-    out_str += "<tr><th>Username</th><th>Progress</th><th>First Modified</th><th>Last Modified</th><th>Annotation Time</th></tr>\n"
+    out_str += "<tr>" + "".join(
+        f"<th>{x}</th>" for x in ["Username", "Progress", "First Modified", "Last Modified", "Time (Last-First)", "Time (Real)"]
+    ) + "</tr>\n"
 
     for team in campaign.teams.all():
         for user in team.members.all():
@@ -262,6 +264,8 @@ def campaign_status_esa(campaign) -> str:
             )
             if not _data:
                 out_str += f"<td>{user.username} 💤</td>"
+                out_str += "<td></td>"
+                out_str += "<td></td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
@@ -284,17 +288,23 @@ def campaign_status_esa(campaign) -> str:
 
                 out_str += f"<td>{first_modified_str}</td>"
                 out_str += f"<td>{last_modified_str}</td>"
-
-                times = collections.defaultdict()
-                for item in _data:
-                    times[(item.item.documentID, item.item.targetID)] = (item.start_time, item.end_time)
-                annotation_time = sum([b-a for a, b in times.values()])
-                annotation_time = f'{int(floor(annotation_time / 3600)):0>2d}h{int(floor((annotation_time % 3600) / 60)):0>2d}m'
-
                 annotation_time_upper = last_modified - first_modified
-                annotation_time_upper = f'{int(floor(annotation_time_upper / 3600)):0>2d}h{int(floor((annotation_time_upper % 3600) / 60)):0>2d}m'
+                annotation_time_upper = f'{int(floor(annotation_time_upper / 3600)):0>2d}h {int(floor((annotation_time_upper % 3600) / 60)):0>2d}m'
+                out_str += f"<td>{annotation_time_upper}</td>"
 
-                out_str += f"<td>{annotation_time} - {annotation_time_upper}</td>"
+                times = collections.defaultdict(list)
+                for item in _data:
+                    times[(item.item.documentID, item.item.targetID)].append((item.start_time, item.end_time))
+                times = [
+                    (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
+                    for doc, doc_v in times.items()
+                ]
+
+                annotation_time = sum([b-a for a, b in times])
+                annotation_time = f'{int(floor(annotation_time / 3600)):0>2d}h {int(floor((annotation_time % 3600) / 60)):0>2d}m'
+
+                out_str += f"<td>{annotation_time}</td>"
+
             out_str += "</tr>\n"
 
     out_str += "</table>"
