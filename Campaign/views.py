@@ -260,26 +260,14 @@ def campaign_status_esa(campaign) -> str:
             _data = DirectAssessmentDocumentResult.objects.filter(
                 createdBy=user, completed=True, task__campaign=campaign.id
             )
-            total_count = None
-            if _data:
-                _data_all = DirectAssessmentDocumentTask.objects.filter(campaign=campaign.id)
-                # brute-force try to find if any task has at least one item annotated by this user
-                for task in _data_all:
-                    for item in task.items.all():
-                        item = DirectAssessmentDocumentResult.objects.filter(
-                            item=item, createdBy=user
-                        ).last()
-                        if item:
-                            total_count = task.items.count()
-                            break
-                    if total_count:
-                        break
-            if total_count is None:
+            if not _data:
                 out_str += f"<td>{user.username} 💤</td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
                 out_str += "<td></td>"
             else:
+                task = DirectAssessmentDocumentTask.objects.filter(id=_data[0].task_id).first()
+                total_count = task.items.count()
                 if total_count == len(_data):
                     out_str += f"<td>{user.username} ✅</td>"
                 else:
