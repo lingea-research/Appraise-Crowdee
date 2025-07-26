@@ -11,7 +11,6 @@ import json
 from math import floor
 from math import sqrt
 
-from django.contrib.auth.decorators import login_required
 from django.core.management.base import CommandError
 from django.http import HttpResponse
 
@@ -33,8 +32,7 @@ RESULT_TYPE_BY_CLASS_NAME = {tup[1].__name__: tup[2] for tup in TASK_DEFINITIONS
 LOGGER = _get_logger(name=__name__)
 
 
-@login_required
-def campaign_status(request, campaign_name, sort_key=2):
+def campaign_status(request, campaign_name):
     """
     Campaign status view with completion details.
     """
@@ -42,8 +40,6 @@ def campaign_status(request, campaign_name, sort_key=2):
         'Rendering campaign status view for user "%s".',
         request.user.username or "Anonymous",
     )
-    if sort_key is None:
-        sort_key = 2
 
     # Get Campaign instance for campaign name
     try:
@@ -206,7 +202,7 @@ def campaign_status(request, campaign_name, sort_key=2):
 
             _out.append(_item)
 
-    _out.sort(key=lambda x: x[int(sort_key)])
+    _out.sort(key=lambda x: x[2])
 
     _header = (
         'username',
