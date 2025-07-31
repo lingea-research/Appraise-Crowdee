@@ -146,20 +146,20 @@ def run_quality_control(username):
         # File "scipy/stats/stats.py", line 4865, in mannwhitneyu
         #   raise ValueError(
         #     'All numbers are identical in mannwhitneyu')
+        # In this case, let's consider it a failed QC.
         except ValueError:
-            pass
+            _pvalue = 1
 
     # Compute the total annotation time
-    _durations = [x[1] - x[0] for x in _data]
-    annotation_time = sum(_durations) if _durations else None
+    # Be very generous, essentially last action - first action (not individual times)
+    times = [x[1] for x in _data] + [x[0] for x in _data]
+    annotation_time = max(times) - min(times) if times else 0
 
     print(
         f"User '{username}', items= {len(_x)}, p-value= {pvalue}, time= {annotation_time}"
     )
 
-    return (
-        pvalue is not None
-        and pvalue <= MAX_WILCOXON_PVALUE
-        and annotation_time is not None
-        and annotation_time >= MIN_ANNOTATION_TIME
+    return annotation_time >= MIN_ANNOTATION_TIME and (
+        pvalue is None or
+        pvalue <= MAX_WILCOXON_PVALUE
     )
