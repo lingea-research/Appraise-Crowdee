@@ -188,7 +188,7 @@ urlpatterns = [
         name='pairwise-assessment-document',
     ),
     re_path(
-        r'^campaign-status/(?P<campaign_name>[a-zA-Z0-9]+(,[a-zA-Z0-9]+))*/'
+        r'^campaign-status/(?P<campaign_name>[a-zA-Z0-9]+(,[a-zA-Z0-9]+)*)/'
         r'(?P<sort_key>[a-zA-Z0-9_])?/?$',
         campaign_views.campaign_status,
         name='campaign_status',
