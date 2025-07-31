@@ -32,7 +32,7 @@ RESULT_TYPE_BY_CLASS_NAME = {tup[1].__name__: tup[2] for tup in TASK_DEFINITIONS
 LOGGER = _get_logger(name=__name__)
 
 
-def campaign_status(request, campaign_name):
+def campaign_status(request, campaign_name, sort_key=None):
     """
     Campaign status view with completion details.
     """
@@ -40,6 +40,19 @@ def campaign_status(request, campaign_name):
         'Rendering campaign status view for user "%s".',
         request.user.username or "Anonymous",
     )
+
+    if "," in campaign_name:
+        responses = [campaign_status(request, name, sort_key) for name in campaign_name.split(",")]
+        if not all([response.headers["Content-Type"] == responses[0].headers["Content-Type"] for response in responses]):
+            return HttpResponse(
+                'ERROR: You are mixing unrelated campaigns (views.py:campaign_status).',
+                content_type='text/plain',
+            )
+        else:
+            return HttpResponse(
+                "\n\n".join([response.content.decode('utf-8') for response in responses]),
+                content_type=responses[0].headers["Content-Type"],
+            )
 
     # Get Campaign instance for campaign name
     try:
@@ -66,7 +79,11 @@ def campaign_status(request, campaign_name):
     # special handling for ESA
     if "esa" in campaign_opts:
         return campaign_status_esa(campaign)
+    else:
+        return campaign_status_plain(request, campaign, result_type, campaign_opts, sort_key)
 
+
+def campaign_status_plain(request, campaign, result_type, campaign_opts, sort_key):
     _out = []
     for team in campaign.teams.all():
         for user in team.members.all():
@@ -202,7 +219,7 @@ def campaign_status(request, campaign_name):
 
             _out.append(_item)
 
-    _out.sort(key=lambda x: x[2])
+    _out.sort(key=lambda x: x[sort_key if sort_key else 2])
 
     _header = (
         'username',
@@ -250,7 +267,7 @@ def campaign_status_esa(campaign) -> str:
     out_str += "<tr>" + "".join(
         f"<th>{x}</th>" for x in ["Username", "Progress", "First Modified", "Last Modified", "Time (Last-First)", "Time (Real)"]
     ) + "</tr>\n"
-
+    
     for team in campaign.teams.all():
         for user in team.members.all():
             if user.is_staff:
