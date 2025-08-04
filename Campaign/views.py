@@ -264,10 +264,15 @@ def campaign_status_esa(campaign) -> str:
     """
     out_str += f"<h1>{campaign.campaignName}</h1>\n"
     out_str += "<table>\n"
-    out_str += "<tr>" + "".join(
-        f"<th>{x}</th>" for x in ["Username", "Progress", "First Modified", "Last Modified", "Time (Last-First)", "Time (Real)"]
-    ) + "</tr>\n"
-    
+    out_str += """<tr>
+<th>Username</th>
+<th>Progress</th>
+<th>First Modified</th>
+<th>Last Modified</th>
+<th style="cursor: pointer" title="Very coarse upper bound estimate between the last and the first interaction with the system.">Time (Coarse ❔)</th>
+<th style="cursor: pointer" title="Sum of times between any two interactions that are not longer than 10 minutes.">Time (Real ❔)</th>
+</tr>\n
+""" 
     for team in campaign.teams.all():
         for user in team.members.all():
             if user.is_staff:
@@ -352,9 +357,9 @@ def campaign_status_esa(campaign) -> str:
                 annotation_time_upper = f'{int(floor(annotation_time_upper / 3600)):0>2d}h {int(floor((annotation_time_upper % 3600) / 60)):0>2d}m'
                 out_str += f"<td>{annotation_time_upper}</td>"
 
-                # consider time that's in any action within 5 minutes
+                # consider time that's in any action within 10 minutes
                 times = sorted([item.start_time for item in _data] + [item.end_time for item in _data])
-                annotation_time = sum([b-a for a, b in zip(times, times[1:]) if (b-a) < 5*60])
+                annotation_time = sum([b-a for a, b in zip(times, times[1:]) if (b-a) < 10*60])
                 annotation_time = f'{int(floor(annotation_time / 3600)):0>2d}h {int(floor((annotation_time % 3600) / 60)):0>2d}m'
 
                 out_str += f"<td>{annotation_time}</td>"

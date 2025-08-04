@@ -608,9 +608,9 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
         )
 
         if is_esa_or_mqm:
-            # consider time that's in any action within 5 minutes
+            # consider time that's in any action within 10 minutes
             times = sorted([item.start_time for item in results] + [item.end_time for item in results])
-            annotation_time = sum([b-a for a, b in zip(times, times[1:]) if (b-a) < 5*60])
+            annotation_time = sum([b-a for a, b in zip(times, times[1:]) if (b-a) < 10*60])
             return seconds_to_timedelta(annotation_time)
         else:
             timestamps = []
