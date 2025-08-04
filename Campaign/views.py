@@ -298,6 +298,7 @@ def campaign_status_esa(campaign) -> str:
             _data = DirectAssessmentDocumentResult.objects.filter(
                 createdBy=user, completed=True, task__campaign=campaign.id
             )
+            _data_uniq_len = len({item.id for item in _data})
 
             # If no data, show 0 progress or show that no task is assigned
             if not _data:
@@ -331,11 +332,11 @@ def campaign_status_esa(campaign) -> str:
                     continue
 
                 total_count = task.items.count()
-                if total_count == len(_data):
+                if total_count == _data_uniq_len:
                     out_str += f"<td>{user.username} ✅</td>"
                 else:
                     out_str += f"<td>{user.username} 🛠️</td>"
-                out_str += f"<td>{len(_data)}/{total_count} ({len(_data) / total_count:.0%})</td>"
+                out_str += f"<td>{_data_uniq_len}/{total_count} ({_data_uniq_len / total_count:.0%})</td>"
                 first_modified = min([x.start_time for x in _data])
                 last_modified = max([x.end_time for x in _data])
 
@@ -351,15 +352,9 @@ def campaign_status_esa(campaign) -> str:
                 annotation_time_upper = f'{int(floor(annotation_time_upper / 3600)):0>2d}h {int(floor((annotation_time_upper % 3600) / 60)):0>2d}m'
                 out_str += f"<td>{annotation_time_upper}</td>"
 
-                times = collections.defaultdict(list)
-                for item in _data:
-                    times[(item.item.documentID, item.item.targetID)].append((item.start_time, item.end_time))
-                times = [
-                    (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
-                    for doc, doc_v in times.items()
-                ]
-
-                annotation_time = sum([b-a for a, b in times])
+                # consider time that's in any action within 5 minutes
+                times = sorted([item.start_time for item in _data] + [item.end_time for item in _data])
+                annotation_time = sum([b-a for a, b in zip(times, times[1:]) if (b-a) < 5*60])
                 annotation_time = f'{int(floor(annotation_time / 3600)):0>2d}h {int(floor((annotation_time % 3600) / 60)):0>2d}m'
 
                 out_str += f"<td>{annotation_time}</td>"

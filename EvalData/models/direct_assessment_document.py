@@ -599,35 +599,25 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
     @classmethod
     def get_time_for_user(cls, user):
         results = cls.objects.filter(createdBy=user, activated=False, completed=True)
+        campaign_opts = result.task.campaign.campaignOptions.lower().split(";")
         is_esa_or_mqm = any(
             [
-                "esa" in result.task.campaign.campaignOptions.lower().split(";")
-                or "mqm" in result.task.campaign.campaignOptions.lower().split(";")
+                "esa" in campaign_opts or "mqm" in campaign_opts
                 for result in results
             ]
         )
 
         if is_esa_or_mqm:
-            # for ESA or MQM, do minimum and maximum from each doc
-            import collections
-
-            timestamps = collections.defaultdict(list)
-            for result in results:
-                timestamps[
-                    result.item.documentID + " ||| " + result.item.targetID
-                ].append((result.start_time, result.end_time))
-
-            # timestamps are document-level now, but that does not change anything later on
-            timestamps = [
-                (min([x[0] for x in doc_v]), max([x[1] for x in doc_v]))
-                for doc, doc_v in timestamps.items()
-            ]
+            # consider time that's in any action within 5 minutes
+            times = sorted([item.start_time for item in results] + [item.end_time for item in results])
+            annotation_time = sum([b-a for a, b in zip(times, times[1:]) if (b-a) < 5*60])
+            return seconds_to_timedelta(annotation_time)
         else:
             timestamps = []
             for result in results:
                 timestamps.append((result.start_time, result.end_time))
 
-        return seconds_to_timedelta(_compute_user_total_annotation_time(timestamps))
+            return seconds_to_timedelta(_compute_user_total_annotation_time(timestamps))
 
     @classmethod
     def get_system_annotations(cls):
