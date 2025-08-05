@@ -601,10 +601,10 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
         results = cls.objects.filter(createdBy=user, activated=False, completed=True)
         if not results:
             return seconds_to_timedelta(0)
-        campaign_opts = result.task.campaign.campaignOptions.lower().split(";")
         is_esa_or_mqm = any(
             [
-                "esa" in campaign_opts or "mqm" in campaign_opts
+                "esa" in result.task.campaign.campaignOptions.lower().split(";") or
+                "mqm" in result.task.campaign.campaignOptions.lower().split(";")
                 for result in results
             ]
         )
