@@ -599,6 +599,8 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
     @classmethod
     def get_time_for_user(cls, user):
         results = cls.objects.filter(createdBy=user, activated=False, completed=True)
+        if not results:
+            return seconds_to_timedelta(0)
         campaign_opts = result.task.campaign.campaignOptions.lower().split(";")
         is_esa_or_mqm = any(
             [
@@ -931,9 +933,10 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
         qs = cls.objects.filter(completed=True, item__itemType__in=item_types)
 
         # If campaign ID is given, only return results for this campaign.
-        campaign_name = None
         if campaign_id:
             qs = qs.filter(task__campaign__id=campaign_id)
+            if not qs:
+                return []
             campaign_opts = str(qs.first().task.campaign.campaignOptions)
 
         if not include_inactive:
@@ -978,18 +981,15 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
         for result in qs.values_list(*attributes_to_extract):
             user_id = result[0]
 
-            _fixed_ids = result[1].replace('Transformer+R2L', 'Transformer_R2L')
-            _fixed_ids = _fixed_ids.replace('R2L+Back', 'R2L_Back')
-
             if expand_multi_sys:
-                system_ids = _fixed_ids.split('+')
+                system_ids = result[1].split('+')
 
                 for system_id in system_ids:
                     data = (user_id,) + (system_id,) + result[2:]
                     system_data.append(data)
 
             else:
-                system_id = _fixed_ids
+                system_id = result[1]
                 data = (user_id,) + (system_id,) + result[2:]
                 system_data.append(data)
 
