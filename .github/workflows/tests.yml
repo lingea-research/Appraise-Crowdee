@@ -24,7 +24,7 @@ jobs:
       - name: Regression tests
         id: regression_tests
         run: bash RegressionTests/run.sh
-        # Continue even if tests fail, so that we can collect tst outputs for debugging
+        # Continue even if tests fail, so that we can collect test outputs for debugging
         continue-on-error: true
 
       - name: Collect outputs
@@ -36,7 +36,7 @@ jobs:
           7z a -tzip regression-tests-appraise.zip @listing.txt
         
       - name: Publish outputs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: regression-tests-appraise
           path: regression-tests-appraise.zip
