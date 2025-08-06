@@ -303,7 +303,7 @@ def campaign_status_esa(campaign) -> str:
             _data = DirectAssessmentDocumentResult.objects.filter(
                 createdBy=user, completed=True, task__campaign=campaign.id
             )
-            _data_uniq_len = len({item.id for item in _data})
+            _data_uniq_len = len({(item.item.sourceID, item.item.targetID, item.item.itemType, item.item.id) for item in _data})
 
             # If no data, show 0 progress or show that no task is assigned
             if not _data:

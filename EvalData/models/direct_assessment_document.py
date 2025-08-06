@@ -945,7 +945,7 @@ class DirectAssessmentDocumentResult(BaseAssessmentResult):
         attributes_to_extract = (
             'createdBy__username',  # User ID
             'item__targetID',  # System ID
-            'item__itemID',  # Segment ID
+            'item__sourceID',  # Source ID
             'item__itemType',  # Item type
             'item__metadata__market__sourceLanguageCode',  # Source language
             'item__metadata__market__targetLanguageCode',  # Target language
