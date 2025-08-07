@@ -269,8 +269,8 @@ def campaign_status_esa(campaign) -> str:
 <th>Progress</th>
 <th>First Modified</th>
 <th>Last Modified</th>
-<th style="cursor: pointer" title="Very coarse upper bound estimate between the last and the first interaction with the system.">Time (Coarse ❔)</th>
-<th style="cursor: pointer" title="Sum of times between any two interactions that are not longer than 10 minutes.">Time (Real ❔)</th>
+<th style="cursor: pointer" title="Very coarse upper bound estimate between the last and the first interaction with the system.">Time (Coarse❔)</th>
+<th style="cursor: pointer" title="Sum of times between any two interactions that are not longer than 10 minutes.">Time (Real❔)</th>
 </tr>\n
 """ 
     for team in campaign.teams.all():
