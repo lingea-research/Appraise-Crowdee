@@ -1,6 +1,11 @@
 {% extends 'Dashboard/base.html' %}
 
 {% block content %}
+<script>
+  {% if hide_menu_bar and request.GET.user_id %}
+    console.log('user_id:', '{{ request.GET.user_id }}');
+  {% endif %}
+</script>
       <!-- Main jumbotron for a primary marketing message or call to action -->
       <div class="jumbotron">
 

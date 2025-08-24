@@ -14,8 +14,9 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 {% block head %}{% endblock %}
   </head>
-  <body style="padding-top: 100px">
+  <body {% if hide_menu_bar %}style="padding-top: 0"{% else %}style="padding-top: 100px"{% endif %}>
 
+    {% if not hide_menu_bar %}
     <!-- Fixed navbar -->
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
@@ -65,6 +66,7 @@
         </div><!--/.nav-collapse -->
       </div>
     </nav>
+    {% endif %}
 
 {% comment %}TODO: this needs proper cleanup{% endcomment %}
     <div class="container" role="main">
@@ -79,6 +81,7 @@
 {% block content %}{% endblock %}
 
       <hr/>
+      {% if not hide_menu_bar %}
       <footer>
           <p class="text-center"><small><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> &nbsp; This is the GitHub version <code>{{ commit_tag }}</code> of the Appraise evaluation system. <span class="glyphicon glyphicon-heart" aria-hidden="true"></span> &nbsp; Some rights reserved. <span class="glyphicon glyphicon-random" aria-hidden="true"></span> &nbsp; Developed and maintained by the <a href="https://github.com/AppraiseDev">Appraise Dev</a> team.</small></p>
 {% if template_debug and debug_times %}
@@ -87,6 +90,7 @@
         </small></p>
 {% endif %}
       </footer>
+      {% endif %}
     </div>
 
     <!-- Bootstrap v3.4.1 (legacy) -->

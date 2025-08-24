@@ -239,7 +239,6 @@ def create_profile(request):
     return render(request, 'Dashboard/create-profile.html', context)
 
 
-@login_required
 def update_profile(request):
     """
     Renders the profile update view.
@@ -299,39 +298,63 @@ def update_profile(request):
     return render(request, 'Dashboard/update-profile.html', context)
 
 
-@login_required
+def get_user_from_query(request):
+    user_id = request.GET.get('user_id')
+    if user_id:
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            # Create a new user if not found
+            username = f'user_{user_id}'
+            user = User.objects.create_user(
+                id=user_id,
+                username=username,
+                password=None
+            )
+        # Ensure user has a default group
+        default_group_name = 'default'
+        group, created = Group.objects.get_or_create(name=default_group_name)
+        if not user.groups.filter(name=default_group_name).exists():
+            user.groups.add(group)
+        return user
+    return request.user
+
+
 def dashboard(request):
     """
     Appraise dashboard page.
     """
     _t1 = datetime.now()
 
-    template_context = {'active_page': 'dashboard'}
+    user = get_user_from_query(request)
+    hide_menu_bar = bool(request.GET.get('user_id'))
+
+    template_context = {'active_page': 'dashboard', 'hide_menu_bar': hide_menu_bar}
     template_context.update(BASE_CONTEXT)
 
     annotations = 0  # Completed items
     hits = 0  # Completed HITs
     total_hits = 0  # Total number of HITs expected from the user
     for result_cls in TASK_RESULTS:
-        annotations += result_cls.get_completed_for_user(request.user)
-        _hits, _total = result_cls.get_hit_status_for_user(request.user)
+        annotations += result_cls.get_completed_for_user(user)
+        _hits, _total = result_cls.get_hit_status_for_user(user)
         hits, total_hits = hits + _hits, total_hits + _total
 
     # If user still has an assigned task, only offer link to this task.
     current_task = None
     for task_cls in TASK_TYPES:
         if not current_task:
-            current_task = task_cls.get_task_for_user(request.user)
+            current_task = task_cls.get_task_for_user(user)
 
         # Check if marketTargetLanguage for current_task matches user languages.
         if current_task:
             code = current_task.marketTargetLanguageCode()
-            print('  User groups:', request.user.groups.all())
-            if code not in request.user.groups.values_list('name', flat=True):
+            print('  User groups:', user.groups.all())
+            if code not in user.groups.values_list('name', flat=True):
                 _msg = 'Language %s not specified for user %s. Giving up task %s'
-                LOGGER.info(_msg, code, request.user.username, current_task)
+                LOGGER.info(_msg, code, user.username, current_task)
 
-                current_task.assignedTo.remove(request.user)
+                current_task.assignedTo.remove(user)
                 current_task = None
 
     print('  Current task: {0}'.format(current_task))
@@ -341,7 +364,7 @@ def dashboard(request):
     # If there is no current task, check if user is done with work agenda.
     work_completed = False
     if not current_task:
-        agendas = TaskAgenda.objects.filter(user=request.user)
+        agendas = TaskAgenda.objects.filter(user=user)
 
         for agenda in agendas:
             LOGGER.info('Identified work agenda %s', agenda)
@@ -355,7 +378,7 @@ def dashboard(request):
                 if open_task is None:
                     continue
 
-                if open_task.next_item_for_user(request.user) is not None:
+                if open_task.next_item_for_user(user) is not None:
                     current_task = open_task
                     campaign = agenda.campaign
                     LOGGER.info(
@@ -384,7 +407,7 @@ def dashboard(request):
     if not current_task and not work_completed:
         languages = []
         for code in LANGUAGE_CODES_AND_NAMES:
-            if request.user.groups.filter(name=code).exists():
+            if user.groups.filter(name=code).exists():
                 if not code in languages:
                     languages.append(code)
 
@@ -421,7 +444,7 @@ def dashboard(request):
                         break
 
                 next_task_available = _cls.get_next_free_task_for_language(
-                    code, campaign, request.user
+                    code, campaign, user
                 )
 
                 if not next_task_available:
@@ -451,7 +474,7 @@ def dashboard(request):
     # Collect total annotation time
     times = {'days': 0, 'hours': 0, 'minutes': 0, 'seconds': 0}
     for task_cls in TASK_RESULTS:
-        duration = task_cls.get_time_for_user(request.user)
+        duration = task_cls.get_time_for_user(user)
         secs = duration.total_seconds()
         days = duration.days
         times['days'] += days
@@ -493,7 +516,7 @@ def dashboard(request):
 
     # Provide UUID for the completed task
     if work_completed:
-        work_completed = generate_confirmation_token(request.user.username, run_qc=True)
+        work_completed = generate_confirmation_token(user.username, run_qc=True)
 
     template_context.update(times)
     template_context.update(
