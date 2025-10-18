@@ -7,6 +7,9 @@ Packages
 regressiontests.db
 ./static
 
+# PyCharm
+.idea
+
 # Python
 *.py[cod]
 __pycache__

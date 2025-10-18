@@ -1,6 +1,28 @@
 {% extends 'Dashboard/base.html' %}
 
 {% block content %}
+<!-- Modal for completion code -->
+{% if show_completion_modal and completion_code %}
+<div class="modal" tabindex="-1" role="dialog" style="display:block; background:rgba(0,0,0,0.5);">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Thank you for your answers!</h4>
+      </div>
+      <div class="modal-body">
+        <p>Please copy the following code and insert it into the form on the Crowdee task page in the other tab. (It is located right below the link you have clicked to open to this page.)</p>
+        <div class="alert alert-info text-center" style="font-size:1.5em;">
+          <input style="vertical-align: middle; border: 0px; background-color: transparent; font-size: large; margin-right: 10px; text-align:center;" id="completion_code" value="{{ completion_code }}" readonly size=16 />
+          <button type="button" class="btn btn-default btn-xs" onclick="javascript:var code=document.getElementById('completion_code'); code.select(); document.execCommand('copy'); code.blur(); window.getSelection().removeAllRanges();">
+            <span class="glyphicon glyphicon-copy" aria-hidden="true"></span> Copy
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <script>
   {% if hide_menu_bar and request.GET.user_id %}
     console.log('user_id:', '{{ request.GET.user_id }}');

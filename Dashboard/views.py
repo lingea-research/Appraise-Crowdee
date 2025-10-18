@@ -299,18 +299,20 @@ def update_profile(request):
 
 
 def get_user_from_query(request):
-    user_id = request.GET.get('user_id')
-    if user_id:
+    crowdee_user_id = request.GET.get('user_id')  # Now treated as a string
+    if crowdee_user_id:
+        from .models import UserProfile
         try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            # Create a new user if not found
-            username = f'user_{user_id}'
+            profile = UserProfile.objects.get(crowdee_user_id=crowdee_user_id)
+            user = profile.user
+        except UserProfile.DoesNotExist:
+            # Create a new user and profile
+            username = f'user_{crowdee_user_id}'
             user = User.objects.create_user(
-                id=user_id,
                 username=username,
                 password=None
             )
+            profile = UserProfile.objects.create(user=user, crowdee_user_id=crowdee_user_id)
         # Ensure user has a default group
         default_group_name = 'default'
         group, created = Group.objects.get_or_create(name=default_group_name)
@@ -328,6 +330,35 @@ def dashboard(request):
 
     user = get_user_from_query(request)
     hide_menu_bar = bool(request.GET.get('user_id'))
+
+    # --- New logic for param_p and task_id ---
+    param_p = request.GET.get('param_p')
+    task_id = request.GET.get('task_id')
+    session_obj = None
+    show_completion_modal = False
+    completion_code = None
+    if param_p is not None and task_id is not None:
+        try:
+            param_p = int(param_p)
+            task_id = int(task_id)
+            from .models import UserProfile, UserTaskSession
+            profile = user.profile
+            session_obj, created = UserTaskSession.objects.get_or_create(
+                user_profile=profile,
+                param_p=param_p,
+                task_id=task_id,
+                defaults={'start_time': datetime.now()}
+            )
+            # If this is a completion POST, set end_time
+            if request.method == 'POST' and 'complete_task' in request.POST:
+                if session_obj.end_time is None:
+                    session_obj.end_time = datetime.now()
+                    session_obj.save()
+                    show_completion_modal = True
+                    completion_code = f"<CODE{67239 + param_p}>"
+        except Exception as e:
+            pass  # Optionally log error
+    # --- End new logic ---
 
     template_context = {'active_page': 'dashboard', 'hide_menu_bar': hide_menu_bar}
     template_context.update(BASE_CONTEXT)
@@ -533,5 +564,8 @@ def dashboard(request):
             'work_completed': work_completed,
         }
     )
+    # Add modal dialog context
+    template_context['show_completion_modal'] = show_completion_modal
+    template_context['completion_code'] = completion_code
 
     return render(request, 'Dashboard/dashboard.html', template_context)

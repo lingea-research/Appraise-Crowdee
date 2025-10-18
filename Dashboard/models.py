@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.utils import OperationalError
 from django.db.utils import ProgrammingError
+from django.utils import timezone
 
 # pylint: disable=import-error
 
@@ -225,7 +226,6 @@ LANGUAGE_CODES_AND_NAMES = {
     'kas': 'Kashmiri (كٲشُر)',
     'mni': 'Meitei (ꯃꯩꯇꯩꯂꯣꯟ)',
     'sat': 'Santali (ᱥᱟᱱᱛᱟᱲᱤ)',
-    'mas': 'Maasai (Ol Maa)',
 }
 
 # All sign language codes
@@ -332,3 +332,33 @@ class TimedKeyValueData(models.Model):
         if not _latest_values or _latest_values[0] != new_value:
             new_data = cls(key=key, value=new_value)
             new_data.save()
+
+
+class UserProfile(models.Model):
+    """
+    Extends the User model with a unique crowdee_user_id field.
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+
+    crowdee_user_id = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Unique Crowdee user ID",
+    )
+
+    def __str__(self):
+        return f"Profile for {self.user.username} (Crowdee ID: {self.crowdee_user_id})"
+
+
+class UserTaskSession(models.Model):
+    user_profile = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='task_sessions')
+    param_p = models.IntegerField()
+    task_id = models.IntegerField()
+    start_time = models.DateTimeField(default=timezone.now)
+    end_time = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Session: {self.user_profile.crowdee_user_id}, p={self.param_p}, task={self.task_id}"
