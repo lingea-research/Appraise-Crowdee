@@ -24,11 +24,21 @@
 {% endif %}
 
 <script>
-  {% if hide_menu_bar and request.GET.user_id %}
-    console.log('user_id:', '{{ request.GET.user_id }}');
-  {% endif %}
+  // Prefer session-stored crowdee_user_id so it logs even when subsequent requests don't include GET params
+  (function() {
+    try {
+      {% if hide_menu_bar or request.session.hide_ui %}
+        var uid = {{ request.session.crowdee_user_id|default:'null'|safe }};
+        if (uid && uid !== 'None') {
+          console.log('user_id:', uid);
+        }
+      {% endif %}
+    } catch(e) { }
+  })();
 </script>
+
       <!-- Main jumbotron for a primary marketing message or call to action -->
+{% if not hide_menu_bar and not request.session.hide_ui %}
       <div class="jumbotron">
 
         <h1>Dashboard</h1>
@@ -39,6 +49,11 @@
             <h3 class="panel-title"><strong>This is Appraise</strong></h3>
           </div>
           <div class="panel-body">
+{% else %}
+      <div>
+        <div class="panel panel-primary" style="margin-top: 20px;">
+          <div class="panel-body">
+{% endif %}
 {% if current_task %}
             <h3>Current set</h3>
             <p>Continue annotation for <a href="{% url current_url %}">{{current_task.campaign}}:{{current_task.marketTargetLanguage}}</a>.</p>

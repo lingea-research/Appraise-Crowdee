@@ -14,9 +14,10 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 {% block head %}{% endblock %}
   </head>
-  <body {% if hide_menu_bar %}style="padding-top: 0"{% else %}style="padding-top: 100px"{% endif %}>
+  {# reduce top padding when UI is hidden either via GET param or session; add bottom padding when status bar is present #}
+  <body {% if hide_menu_bar or request.session.hide_ui|default:False %}style="padding-top: 0; padding-bottom: 60px"{% else %}style="padding-top: 100px"{% endif %}>
 
-    {% if not hide_menu_bar %}
+    {% if not hide_menu_bar and not request.session.hide_ui|default:False %}
     <!-- Fixed navbar -->
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
@@ -81,7 +82,7 @@
 {% block content %}{% endblock %}
 
       <hr/>
-      {% if not hide_menu_bar %}
+      {% if not hide_menu_bar and not request.session.hide_ui|default:False %}
       <footer>
           <p class="text-center"><small><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> &nbsp; This is the GitHub version <code>{{ commit_tag }}</code> of the Appraise evaluation system. <span class="glyphicon glyphicon-heart" aria-hidden="true"></span> &nbsp; Some rights reserved. <span class="glyphicon glyphicon-random" aria-hidden="true"></span> &nbsp; Developed and maintained by the <a href="https://github.com/AppraiseDev">Appraise Dev</a> team.</small></p>
 {% if template_debug and debug_times %}
@@ -93,9 +94,36 @@
       {% endif %}
     </div>
 
+    <!-- Status bar shown when hide_ui is set: displays crowdee_user_id, task_id and param_p -->
+    {% if request.session.hide_ui|default:False %}
+    <div id="crowdee-status-bar" class="navbar navbar-default navbar-fixed-bottom" style="background:#222;color:#fff;border-top:1px solid rgba(255,255,255,0.1);">
+      <div class="container text-center" style="padding:8px;">
+        <small>
+          <strong>crowdee_user_id:</strong> {{ request.session.crowdee_user_id|default:'-' }}
+          &nbsp;&nbsp; <strong>task_id:</strong> {{ request.session.task_id|default:'-' }}
+          &nbsp;&nbsp; <strong>param_p:</strong> {{ request.session.param_p|default:'-' }}
+        </small>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Bootstrap v3.4.1 (legacy) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script>
 
 {% block actions %}{% endblock %}
+
+<script>
+// Print crowdee user id to browser console when present in session
+(function(){
+  try {
+    var crowdee = {{ request.session.crowdee_user_id|default:'null'|safe }};
+    if (crowdee && crowdee !== 'None') {
+      console.log('crowdee_user_id:', crowdee);
+    }
+  } catch(e) {
+    // ignore
+  }
+})();
+</script>
   </body>
 </html>

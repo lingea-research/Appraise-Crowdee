@@ -35,8 +35,6 @@ TASK_NAMES = {tup[1]: tup[0].lower() for tup in TASK_DEFINITIONS}
 TASK_URLS = {tup[0].lower(): tup[3] for tup in TASK_DEFINITIONS}
 
 
-from deprecated import add_deprecated_method
-
 LOGGER = _get_logger(name=__name__)
 
 HITS_REQUIRED_BEFORE_ENGLISH_ALLOWED = 5
@@ -308,6 +306,13 @@ def get_user_from_query(request):
         except UserProfile.DoesNotExist:
             # Create a new user and profile
             username = f'user_{crowdee_user_id}'
+            # Ensure unique username
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}_{counter}"
+                counter += 1
+
             user = User.objects.create_user(
                 username=username,
                 password=None
@@ -318,6 +323,20 @@ def get_user_from_query(request):
         group, created = Group.objects.get_or_create(name=default_group_name)
         if not user.groups.filter(name=default_group_name).exists():
             user.groups.add(group)
+        # Ensure the user is logged in for this request/session
+        try:
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
+            login(request, user)
+            # Persist session flags so UI stays hidden across requests
+            try:
+                request.session['crowdee_user_id'] = str(crowdee_user_id)
+                request.session['hide_ui'] = True
+                request.session.modified = True
+            except Exception:
+                pass
+        except Exception:
+            # Don't break if login fails; continue with the user object
+            pass
         return user
     return request.user
 

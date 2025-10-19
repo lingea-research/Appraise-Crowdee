@@ -68,10 +68,19 @@ if all((DB_ENGINE, DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT)):
     }
 
 else:
+    # Prefer a DB file under /data (mounted from host) if that directory exists.
+    # Allow overriding with APPRAISE_DB_NAME env var.
+    if os.environ.get('APPRAISE_DB_NAME'):
+        db_name = os.environ.get('APPRAISE_DB_NAME')
+    elif os.path.exists('/data'):
+        db_name = os.path.join('/data', 'db.sqlite3')
+    else:
+        db_name = os.path.join(BASE_DIR, 'db.sqlite3')
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            'NAME': db_name,
         }
     }
 
@@ -93,6 +102,17 @@ LOG_HANDLER = RotatingFileHandler(
     encoding="utf-8",
 )
 LOG_HANDLER.setFormatter(LOG_FORMATTER)
+
+# Additional rotating file handler specifically for middleware logs
+MIDDLEWARE_LOG_FILENAME = os.path.join(BASE_DIR, 'middleware.log')
+MIDDLEWARE_LOG_HANDLER = RotatingFileHandler(
+    filename=MIDDLEWARE_LOG_FILENAME,
+    mode='a',
+    maxBytes=10 * 1024 * 1024,
+    backupCount=3,
+    encoding='utf-8',
+)
+MIDDLEWARE_LOG_HANDLER.setFormatter(LOG_FORMATTER)
 
 LOGIN_URL = '/dashboard/sign-in/'
 LOGIN_REDIRECT_URL = '/dashboard/'
@@ -141,6 +161,18 @@ MIDDLEWARE.extend(
         'django.middleware.clickjacking.XFrameOptionsMiddleware',
     ]
 )
+
+# Insert CrowdeeAuthMiddleware after AuthenticationMiddleware so it can rely on request.user being set
+try:
+    AUTH_MIDDLEWARE = 'django.contrib.auth.middleware.AuthenticationMiddleware'
+    CROWDEE_MIDDLEWARE = 'Appraise.middleware.CrowdeeAuthMiddleware'
+    if AUTH_MIDDLEWARE in MIDDLEWARE and CROWDEE_MIDDLEWARE not in MIDDLEWARE:
+        idx = MIDDLEWARE.index(AUTH_MIDDLEWARE)
+        MIDDLEWARE.insert(idx + 1, CROWDEE_MIDDLEWARE)
+except Exception:
+    # Fallback: append to the middleware stack if something goes wrong
+    if CROWDEE_MIDDLEWARE not in MIDDLEWARE:
+        MIDDLEWARE.append(CROWDEE_MIDDLEWARE)
 
 ROOT_URLCONF = 'Appraise.urls'
 

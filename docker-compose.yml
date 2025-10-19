@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist the SQLite DB directory to the host so the container can create db.sqlite3 in /data
+      - ./data:/data
+      # Persist collected static files (optional)
+      - ./static:/app/static
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
