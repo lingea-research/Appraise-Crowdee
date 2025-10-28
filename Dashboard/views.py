@@ -37,7 +37,7 @@ TASK_URLS = {tup[0].lower(): tup[3] for tup in TASK_DEFINITIONS}
 
 LOGGER = _get_logger(name=__name__)
 
-HITS_REQUIRED_BEFORE_ENGLISH_ALLOWED = 5
+HITS_REQUIRED_BEFORE_ENGLISH_ALLOWED = 0
 
 
 # HTTP error handlers supporting COMMIT_TAG.
