@@ -374,7 +374,7 @@ def dashboard(request):
                     session_obj.end_time = datetime.now()
                     session_obj.save()
                     show_completion_modal = True
-                    completion_code = f"<CODE{67239 + param_p}>"
+                    completion_code = f"{67239 + param_p}"
         except Exception as e:
             pass  # Optionally log error
     # --- End new logic ---
