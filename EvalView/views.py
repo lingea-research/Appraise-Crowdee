@@ -197,6 +197,24 @@ def direct_assessment(request, code=None, campaign_name=None):
     source_language = current_task.marketSourceLanguage()
     target_language = current_task.marketTargetLanguage()
 
+    # --- Task progress calculations ---
+    try:
+        all_results = DirectAssessmentResult.objects.filter(
+            task=current_task, activated=False, completed=True
+        ).values_list('item_id', flat=True)
+        task_progress_completed = len(set(all_results))
+
+        # Displayable total: use 100 as the per-item multiplier (same as elsewhere)
+        required_user_results = 100
+        task_progress_total = current_task.requiredAnnotations * required_user_results
+
+        user_completed_assessments = current_task.completed_items_for_user(request.user)
+    except Exception:
+        task_progress_completed = 0
+        task_progress_total = 0
+        user_completed_assessments = 0
+    # --- end task progress ---
+
     t4 = datetime.now()
 
     # Define priming question
@@ -273,6 +291,10 @@ def direct_assessment(request, code=None, campaign_name=None):
         'task_id': current_item.id,
         'completed_blocks': completed_blocks,
         'items_left_in_block': 10 - (completed_items - completed_blocks * 10),
+        # Progress for this task
+        'task_progress_completed': task_progress_completed,
+        'task_progress_total': task_progress_total,
+        'user_completed_assessments': user_completed_assessments,
         'source_language': source_language,
         'target_language': target_language,
         'debug_times': (t2 - t1, t3 - t2, t4 - t3, t4 - t1),
@@ -1059,7 +1081,8 @@ def direct_assessment_document(request, code=None, campaign_name=None):
         ajax_context = {'saved': item_saved, 'error_msg': error_msg}
         context.update(ajax_context)
         context.update(BASE_CONTEXT)
-        return JsonResponse(context)  # Sent response to the Ajax POST request
+        # Send response to the Ajax POST request
+        return JsonResponse(context)
 
     page_context = {
         'items': zip(block_items, block_scores),
@@ -2445,7 +2468,8 @@ def pairwise_assessment_document(request, code=None, campaign_name=None):
         ajax_context = {'saved': item_saved, 'error_msg': error_msg}
         context.update(ajax_context)
         context.update(BASE_CONTEXT)
-        return JsonResponse(context)  # Sent response to the Ajax POST request
+        # Sent response to the Ajax POST request
+        return JsonResponse(context)
 
     page_context = {
         'items': zip(block_items, block_scores),

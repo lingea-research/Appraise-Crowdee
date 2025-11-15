@@ -127,7 +127,40 @@ function update_score()
     </td>
   </tr>
   </table>
+
+  <!-- Progress bar -->
+  <div class="row" style="margin-top:8px;">
+    <div class="col-sm-12">
+      <div class="progress" aria-label="Task progress" data-completed="{{task_progress_completed|default:0}}" data-total="{{task_progress_total|default:0}}">
+        <div id="task-progress-bar" class="progress-bar" role="progressbar" style="width:0%; min-width:2em;">0%</div>
+      </div>
+      <div style="text-align:right; font-size:0.9em; color:#333; margin-top:4px;">
+        {% if task_progress_total %}
+          Progress: {{task_progress_completed}} / {{task_progress_total}}
+        {% else %}
+          Progress: {{task_progress_completed}}
+        {% endif %}
+        &nbsp;|&nbsp; You: {{user_completed_assessments}}
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+(function(){
+  try{
+    var container = document.querySelector('.progress[aria-label="Task progress"]');
+    if(!container) return;
+    var completed = parseInt(container.getAttribute('data-completed')) || 0;
+    var total = parseInt(container.getAttribute('data-total')) || 0;
+    var pct = 0;
+    if(total > 0){ pct = Math.round((completed / total) * 100); }
+    else if(completed > 0){ pct = 100; }
+    var bar = document.getElementById('task-progress-bar');
+    if(bar){ bar.style.width = pct + '%'; bar.textContent = pct + '%'; }
+  }catch(e){ }
+})();
+</script>
 
 <div class="row">
 <div class="col-sm-12">

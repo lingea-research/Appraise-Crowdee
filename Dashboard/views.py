@@ -17,6 +17,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.urls import reverse
 
 from Appraise.settings import BASE_CONTEXT
 from Appraise.utils import _get_logger
@@ -93,6 +94,15 @@ def sso_login(request, username, password):
         'Rendering SSO login view for user "%s".',
         request.user.username or "Anonymous",
     )
+
+    # Preserve query parameters when redirecting so that dashboard() can
+    # process user_id, param_p and task_id from the query string.
+    try:
+        qs = request.GET.urlencode()
+        if qs:
+            return redirect(f"{reverse('dashboard')}?{qs}")
+    except Exception:
+        pass
 
     return redirect('dashboard')
 
@@ -382,6 +392,27 @@ def dashboard(request):
     template_context = {'active_page': 'dashboard', 'hide_menu_bar': hide_menu_bar}
     template_context.update(BASE_CONTEXT)
 
+    # Expose query params (if any) to the template so they can be displayed
+    # in the UI as a status bar. Prefer the parsed/validated integer values
+    # (param_p and task_id) if we've parsed them above; fall back to GET.
+    try:
+        template_context['query_user_id'] = (
+            request.GET.get('user_id') or request.session.get('crowdee_user_id')
+        )
+    except Exception:
+        template_context['query_user_id'] = None
+
+    try:
+        # param_p/task_id might have been converted to int earlier
+        template_context['query_param_p'] = param_p if 'param_p' in locals() else request.GET.get('param_p')
+    except Exception:
+        template_context['query_param_p'] = None
+
+    try:
+        template_context['query_task_id'] = task_id if 'task_id' in locals() else request.GET.get('task_id')
+    except Exception:
+        template_context['query_task_id'] = None
+
     annotations = 0  # Completed items
     hits = 0  # Completed HITs
     total_hits = 0  # Total number of HITs expected from the user
@@ -564,6 +595,22 @@ def dashboard(request):
     current_url = TASK_URLS[current_type]
     print('  URL: {0}'.format(current_url))
 
+    # Compute current task progress: how many items the user completed vs total items in the task
+    task_user_completed = 0
+    task_total_items = 0
+    if current_task:
+        try:
+            # number of unique items completed by this user for the current task
+            task_user_completed = current_task.completed_items_for_user(user)
+        except Exception:
+            task_user_completed = 0
+
+        try:
+            # total number of items in the task
+            task_total_items = current_task.items.count()
+        except Exception:
+            task_total_items = 0
+
     # Provide UUID for the completed task
     if work_completed:
         work_completed = generate_confirmation_token(user.username, run_qc=True)
@@ -574,6 +621,8 @@ def dashboard(request):
             'annotations': annotations,
             'hits': hits,
             'total_hits': total_hits,
+            'task_user_completed': task_user_completed,
+            'task_total_items': task_total_items,
             'current_task': current_task,
             'current_type': current_type,
             'current_url': current_url,
@@ -586,5 +635,19 @@ def dashboard(request):
     # Add modal dialog context
     template_context['show_completion_modal'] = show_completion_modal
     template_context['completion_code'] = completion_code
+
+    # Additionally expose a persistent completion code for the most recent
+    # finished UserTaskSession for the user's profile so that the code is
+    # displayed on the dashboard after completion (not only immediately in the modal).
+    completion_code_persistent = None
+    try:
+        profile = user.profile
+        last_completed = profile.task_sessions.filter(end_time__isnull=False).order_by('-end_time').first()
+        if last_completed:
+            completion_code_persistent = str(67239 + int(last_completed.param_p))
+    except Exception:
+        completion_code_persistent = None
+
+    template_context['completion_code_persistent'] = completion_code_persistent
 
     return render(request, 'Dashboard/dashboard.html', template_context)

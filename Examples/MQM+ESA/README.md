@@ -13,9 +13,9 @@ python3 manage.py migrate;
 DJANGO_SUPERUSER_USERNAME=test DJANGO_SUPERUSER_PASSWORD=test python3 manage.py createsuperuser --noinput --email "test@test.test";
 python3 manage.py collectstatic --no-post-process;
 
-python3 manage.py StartNewCampaign Examples/MQM+ESA/manifest_esa.json \
-    --batches-json Examples/MQM+ESA/batches_esa.json \
-    --csv-output Examples/MQM+ESA/output_esa.csv;
+python3 manage.py StartNewCampaign Examples/MQM+ESA/manifest_esa_2.json \
+    --batches-json Examples/MQM+ESA/batches_esa_2.json \
+    --csv-output Examples/MQM+ESA/output_esa_2.csv;
 
 python3 manage.py StartNewCampaign Examples/MQM+ESA/manifest_mqm.json \
    --batches-json Examples/MQM+ESA/batches_mqm.json \

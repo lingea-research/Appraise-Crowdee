@@ -23,6 +23,32 @@
 </div>
 {% endif %}
 
+{% if completion_code_persistent %}
+<div class="row" style="margin-top:10px;">
+  <div class="col-sm-6 col-sm-offset-3 text-center alert alert-success">
+    <p style="margin:0 0 8px 0;">Your completion code (copy and paste to Crowdee):</p>
+    <div>
+      <input id="persistent_completion_code" value="{{ completion_code_persistent }}" readonly size=16 style="vertical-align: middle; border: 0px; background-color: transparent; font-size: large; margin-right: 10px; text-align:center;" />
+      <button type="button" class="btn btn-default btn-xs" onclick="javascript:var code=document.getElementById('persistent_completion_code'); code.select(); document.execCommand('copy'); code.blur(); window.getSelection().removeAllRanges();">
+        <span class="glyphicon glyphicon-copy" aria-hidden="true"></span> Copy
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if query_user_id or query_task_id or query_param_p %}
+<div class="row" style="margin-top:8px;">
+  <div class="col-sm-12 text-center">
+    <small style="color:#333;">Status:
+      {% if query_user_id %}Crowdee ID: <strong>{{ query_user_id }}</strong>{% endif %}
+      {% if query_task_id %}&nbsp;&middot;&nbsp;task_id: <strong>{{ query_task_id }}</strong>{% endif %}
+      {% if query_param_p %}&nbsp;&middot;&nbsp;param_p: <strong>{{ query_param_p }}</strong>{% endif %}
+    </small>
+  </div>
+</div>
+{% endif %}
+
 <script>
   // Prefer session-stored crowdee_user_id so it logs even when subsequent requests don't include GET params
   (function() {
@@ -42,7 +68,6 @@
       <div class="jumbotron">
 
         <h1>Dashboard</h1>
-        <h4>Evaluation campaign for shared tasks hosted at <a href="https://www2.statmt.org/wmt25/translation-task.html">the 10th Conference on Machine Translation</a> (WMT25)</h4>
 
         <div class="panel panel-primary" style="margin-top: 20px;">
           <div class="panel-heading">
@@ -56,7 +81,11 @@
 {% endif %}
 {% if current_task %}
             <h3>Current set</h3>
-            <p>Continue annotation for <a href="{% url current_url %}">{{current_task.campaign}}:{{current_task.marketTargetLanguage}}</a>.</p>
+            <p>{% if task_user_completed == 0 %}Start annotation for{% else %}Continue annotation for{% endif %} <a href="{% url current_url %}">{{current_task.campaign}}:{{current_task.marketTargetLanguage}}</a>
+              {% if task_total_items %}
+                &nbsp;&middot;&nbsp;<small>{{ task_user_completed }} / {{ task_total_items }} annotated</small>
+              {% endif %}
+            .</p>
 {% elif all_languages %}
     {% for _, languages in all_languages.items %}
     {% if languages %}
